@@ -1,0 +1,33 @@
+<table>
+
+<thead>
+
+<tr>
+
+<th>IP</th>
+<th>Nombre</th>
+<th>Red</th>
+<th>Bytes</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tabla_ips">
+
+{% for row in dashboard.top_ips %}
+
+<tr>
+
+<td>{{ row.srcip }}</td>
+<td>{{ row.srcname }}</td>
+<td>{{ row.network }}</td>
+<td>{{ row.bytes | bytes }}</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>

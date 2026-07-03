@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>FortiGate Monitor</h1>
+
+<div class="subtitle">
+    Firewall: <strong>{{ firewall }}</strong>
+</div>
+
+<div class="cards">
+
+    <div class="card">
+        <div class="title">Equipos</div>
+        <div class="number" id="equipos">{{ equipos }}</div>
+    </div>
+
+    <div class="card">
+        <div class="title">Servicios</div>
+        <div class="number" id="servicios">{{ servicios }}</div>
+    </div>
+
+    <div class="card">
+        <div class="title">Destinos</div>
+        <div class="number" id="destinos">{{ destinos }}</div>
+    </div>
+
+    <div class="card">
+        <div class="title">Redes</div>
+        <div class="number" id="redes">{{ redes }}</div>
+    </div>
+
+</div>
+<hr>
+
+<h2>Top Equipos</h2>
+
+{% include "top_ips.html" %}
+
+<hr>
+
+<h2>Top Servicios</h2>
+
+{% include "top_services.html" %}
+
+<hr>
+
+<h2>Top Destinos</h2>
+
+{% include "top_destinations.html" %}
+
+<hr>
+
+<h2>Top Políticas</h2>
+
+{% include "top_policies.html" %}
+
+<hr>
+
+<h2>Tráfico por Red</h2>
+
+{% include "top_networks.html" %}
+
+<hr>
+
+<div class="cards">
+
+    <div class="card">
+        <div class="title">Sesiones</div>
+        <div class="number" id="sesiones">
+            {{ summary.sesiones }}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">Tráfico Total</div>
+        <div class="number" id="trafico">
+            {{ summary.bytes | bytes }}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">Aplicaciones</div>
+        <div class="number" id="apps">
+            {{ summary.aplicaciones }}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">Políticas</div>
+        <div class="number" id="politicas">
+            {{ summary.politicas }}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

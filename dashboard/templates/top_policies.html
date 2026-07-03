@@ -1,0 +1,23 @@
+<table>
+
+<thead>
+<tr>
+    <th>Política</th>
+    <th>Conexiones</th>
+    <th>Tráfico</th>
+</tr>
+</thead>
+
+<tbody id="tabla_policies">
+
+{% for row in dashboard.top_policies %}
+<tr>
+    <td>{{ row.policyname or "-" }}</td>
+    <td>{{ row.conexiones }}</td>
+    <td>{{ row.bytes | bytes }}</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>

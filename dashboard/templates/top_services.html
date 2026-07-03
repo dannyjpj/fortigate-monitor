@@ -1,0 +1,22 @@
+<table>
+<thead>
+<tr>
+    <th>Servicio</th>
+    <th>Conexiones</th>
+    <th>Tráfico</th>
+</tr>
+</thead>
+
+<tbody id="tabla_services">
+
+{% for row in dashboard.top_services %}
+<tr>
+    <td>{{ row.service }}</td>
+    <td>{{ row.conexiones }}</td>
+    <td>{{ row.bytes | bytes }}</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>

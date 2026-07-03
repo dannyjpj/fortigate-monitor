@@ -1,0 +1,23 @@
+<table>
+
+<thead>
+<tr>
+    <th>Red</th>
+    <th>Conexiones</th>
+    <th>Tráfico</th>
+</tr>
+</thead>
+
+<tbody id="tabla_networks">
+
+{% for row in dashboard.traffic_networks %}
+<tr>
+    <td>{{ row.network }}</td>
+    <td>{{ row.conexiones }}</td>
+    <td>{{ row.bytes | bytes }}</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>

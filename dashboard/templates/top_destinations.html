@@ -1,0 +1,23 @@
+<table>
+
+<thead>
+<tr>
+    <th>Destino</th>
+    <th>Conexiones</th>
+    <th>Tráfico</th>
+</tr>
+</thead>
+
+<tbody id="tabla_destinations">
+
+{% for row in dashboard.top_destinations %}
+<tr>
+    <td>{{ row.dstip }}</td>
+    <td>{{ row.conexiones }}</td>
+    <td>{{ row.bytes | bytes }}</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
