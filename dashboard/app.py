@@ -252,5 +252,9 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=5000,
-        debug=True
+        debug=False,
+        ssl_context=(
+            "/opt/fortigate-monitor/certs/dashboard.crt",
+            "/opt/fortigate-monitor/certs/dashboard.key"
+        )
     )
