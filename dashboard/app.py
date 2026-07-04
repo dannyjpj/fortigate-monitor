@@ -2,6 +2,10 @@ import csv
 import sqlite3
 import sys
 import os
+import secrets
+import string
+import subprocess
+from datetime import datetime
 from functools import wraps
 
 from flask import send_file
@@ -181,7 +185,68 @@ def portal():
 def download_captive_passwords():
     path = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
     return send_file(path, as_attachment=True)
-    
+
+def gen_password(length=10):
+    chars = string.ascii_letters + string.digits
+    return "".join(secrets.choice(chars) for _ in range(length))
+
+
+@app.route("/api/portal/reset/<username>", methods=["POST"])
+@login_required
+def reset_portal_user(username):
+    cfg = Config().get()
+    fg = cfg["fortigate"]
+    length = cfg["captive_portal"].get("password_length", 10)
+
+    password = gen_password(length)
+
+    cli = f'''
+config user local
+    edit "{username}"
+        set passwd "{password}"
+    next
+end
+'''
+
+    cmd = [
+    "ssh",
+    "-i", "/root/.ssh/fortigate_monitor",
+    "-p", str(fg.get("ssh_port", 22)),
+    "-o", "StrictHostKeyChecking=accept-new",
+    "-o", "IdentitiesOnly=yes",
+    f'{fg.get("ssh_user", "admin")}@{fg["host"]}',
+    ]
+
+    result = subprocess.run(cmd, input=cli, text=True)
+
+    if result.returncode != 0:
+        return jsonify({"status": "error"}), 500
+
+    csv_file = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    rows = []
+    if os.path.exists(csv_file):
+        with open(csv_file, newline="") as f:
+            rows = list(csv.DictReader(f))
+
+    updated = False
+    for row in rows:
+        if row["usuario"] == username:
+            row["fecha"] = today
+            row["password"] = password
+            updated = True
+
+    if not updated:
+        rows.append({"fecha": today, "usuario": username, "password": password})
+
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["fecha", "usuario", "password"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+    return jsonify({"status": "ok", "username": username})
+
 
 if __name__ == "__main__":
     app.run(

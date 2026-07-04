@@ -1,11 +1,9 @@
 {% extends "base.html" %}
-
 {% block content %}
 
 <h1>Portal Cautivo</h1>
 
 <p><a href="/">Volver al Dashboard</a></p>
-
 <p><a href="/download/captive-passwords">Descargar CSV</a></p>
 
 <table border="1" cellpadding="8" cellspacing="0" width="100%">
@@ -14,6 +12,7 @@
             <th>Fecha</th>
             <th>Usuario</th>
             <th>Password</th>
+            <th>Accion</th>
         </tr>
     </thead>
     <tbody>
@@ -22,9 +21,40 @@
             <td>{{ u["fecha"] }}</td>
             <td>{{ u["usuario"] }}</td>
             <td>{{ u["password"] }}</td>
+            <td>
+                <button onclick="resetUser('{{ u['usuario'] }}')">
+                    Reset password
+                </button>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+
+<script>
+function resetUser(username) {
+    if (!confirm("Resetear password de " + username + "?")) {
+        return;
+    }
+
+    fetch("/api/portal/reset/" + username, {
+        method: "POST"
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "ok") {
+            alert("Password actualizado para " + username);
+            location.reload();
+        } else {
+            alert("Error reseteando password");
+            console.log(data);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error de comunicacion");
+    });
+}
+</script>
 
 {% endblock %}
