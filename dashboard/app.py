@@ -1,34 +1,72 @@
+import csv
 import sqlite3
-from datetime import datetime
-from flask import jsonify
-from flask import Flask, render_template
 import sys
 import os
+from functools import wraps
 
-# Permite importar los módulos del proyecto
+from flask import send_file
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
+from werkzeug.security import check_password_hash
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from modules.reports import Reports
 from modules.config import Config
 from modules.fortigate_manager import FortiGateManager
+from dashboard.utils import format_bytes
 
 app = Flask(__name__)
 
-from dashboard.utils import format_bytes
-
+cfg = Config().get()
+app.secret_key = cfg["dashboard"]["secret_key"]
 app.jinja_env.filters["bytes"] = format_bytes
 
-@app.route("/")
-def index():
 
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    cfg = Config().get()
+
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        for user in cfg["users"]:
+            if user["username"] == username and check_password_hash(user["password_hash"], password):
+                session["logged_in"] = True
+                session["username"] = username
+                session["role"] = user.get("role", "admin")
+                return redirect(url_for("index"))
+
+        error = "Usuario o contraseña incorrectos"
+
+    return render_template("login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/")
+@login_required
+def index():
     cfg = Config().get()
     firewall = cfg["fortigate"]["name"]
 
     r = Reports()
-
     summary = r.summary()
     dashboard = r.dashboard()
-
     r.close()
 
     return render_template(
@@ -44,13 +82,12 @@ def index():
 
 
 @app.route("/api/dashboard")
+@login_required
 def api_dashboard():
-
     cfg = Config().get()
     firewall = cfg["fortigate"]["name"]
 
     r = Reports()
-
     data = {
         "firewall": firewall,
         "summary": r.summary(),
@@ -60,12 +97,13 @@ def api_dashboard():
         "redes": len(r.traffic_by_network()),
         "dashboard": r.dashboard()
     }
-
     r.close()
 
     return jsonify(data)
 
+
 @app.route("/quotas")
+@login_required
 def quotas():
     cfg = Config().get()
     db = cfg["general"]["database"]
@@ -86,12 +124,14 @@ def quotas():
 
     return render_template("quotas.html", quotas=quotas)
 
+
 @app.route("/api/quota/release/<ip>", methods=["POST"])
+@login_required
 def release_quota(ip):
     cfg = Config().get()
     db = cfg["general"]["database"]
-    fg = FortiGateManager(cfg["fortigate"])
 
+    fg = FortiGateManager(cfg["fortigate"])
     obj = f"BLOCK_{ip}"
 
     s1, b1 = fg.remove_from_group("BLOQUEADOS_2GB", obj)
@@ -106,6 +146,7 @@ def release_quota(ip):
 
     conn = sqlite3.connect(db)
     cur = conn.cursor()
+
     cur.execute("""
         UPDATE quota_status
         SET status='RELEASED',
@@ -113,13 +154,36 @@ def release_quota(ip):
             firewall_synced=0
         WHERE srcip=?
     """, (ip,))
+
     conn.commit()
     conn.close()
 
     return jsonify({"status": "ok", "ip": ip})
 
+@app.route("/portal")
+@login_required
+def portal():
+    cfg = Config().get()
+    csv_file = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+
+    users = []
+
+    if os.path.exists(csv_file):
+        with open(csv_file, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                users.append(row)
+
+    return render_template("portal.html", users=users)
+
+@app.route("/download/captive-passwords")
+@login_required
+def download_captive_passwords():
+    path = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    return send_file(path, as_attachment=True)
+    
+
 if __name__ == "__main__":
-		
     app.run(
         host="0.0.0.0",
         port=5000,

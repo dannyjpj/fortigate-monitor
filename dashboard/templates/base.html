@@ -1,49 +1,31 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
     <meta charset="UTF-8">
-
     <title>FortiGate Monitor</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 </head>
-
 <body>
-
 <header>
-
     <div class="logo">
-
-        🛡 FortiGate Monitor
-
+        FortiGate Monitor
     </div>
-
     <div class="status">
-
-        🟢 Online
-
+        Online |
+        <a href="/">Dashboard</a> |
+        <a href="/quotas">Cuotas</a> |
+        <a href="/portal">Portal Cautivo</a> |
+        Usuario: {{ session.get("username") }} |
+        <a href="/logout">Cerrar sesion</a>
     </div>
-<a href="/">Dashboard</a>
-<a href="/quotas">Cuotas</a>
-
 </header>
 
 <div class="container">
-
 {% block content %}
 {% endblock %}
-
 </div>
 
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-<script src="/static/js/dashboard.js"></script>
-
 </body>
-
 </html>
