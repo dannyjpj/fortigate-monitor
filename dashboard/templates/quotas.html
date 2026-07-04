@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Gestión de Cuotas</h1>
+
+<p>
+    <a href="/">← Volver al Dashboard</a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>IP</th>
+            <th>Consumo</th>
+            <th>Límite</th>
+            <th>Estado</th>
+            <th>Firewall</th>
+            <th>Bloqueado</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% for q in quotas %}
+
+        <tr>
+
+            <td>{{ q["date"] }}</td>
+
+            <td>{{ q["srcip"] }}</td>
+
+            <td>{{ q["used_gb"] }} GB</td>
+
+            <td>{{ q["limit_gb"] }} GB</td>
+
+            <td>
+
+                {% if q["status"] == "BLOCKED" %}
+                    🔴 {{ q["status"] }}
+                {% elif q["status"] == "RELEASED" %}
+                    🟢 {{ q["status"] }}
+                {% else %}
+                    {{ q["status"] }}
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if q["firewall_synced"] == 1 %}
+                    ✅ {{ q["firewall_object"] }}
+                {% else %}
+                    —
+                {% endif %}
+
+            </td>
+
+            <td>{{ q["blocked_at"] or "-" }}</td>
+
+            <td>
+
+                {% if q["status"] == "BLOCKED" %}
+
+                    <button onclick="releaseIP('{{ q['srcip'] }}')">
+                        🔓 Liberar
+                    </button>
+
+                {% else %}
+
+                    —
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+<script>
+
+function releaseIP(ip){
+
+    if(!confirm("¿Desea liberar la IP " + ip + "?")){
+        return;
+    }
+
+    fetch("/api/quota/release/" + ip, {
+        method: "POST"
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        if(data.status === "ok"){
+            alert("IP liberada correctamente");
+            location.reload();
+        }else{
+            alert("Ocurrió un error");
+            console.log(data);
+        }
+
+    })
+    .catch(err=>{
+        console.error(err);
+        alert("Error de comunicación con el servidor.");
+    });
+
+}
+
+</script>
+
+{% endblock %}

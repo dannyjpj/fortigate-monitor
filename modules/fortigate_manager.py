@@ -33,3 +33,29 @@ class FortiGateManager:
         }
         r = requests.put(url, headers=self.headers, json=payload, verify=self.verify_ssl)
         return r.status_code, r.text
+
+
+    def get_group(self, group):
+        url = f"https://{self.host}/api/v2/cmdb/firewall/addrgrp/{group}"
+        r = requests.get(url, headers=self.headers, verify=self.verify_ssl)
+        return r.status_code, r.json()
+
+    def remove_from_group(self, group, member):
+        status, data = self.get_group(group)
+
+        if status != 200:
+            return status, data
+
+        current = data["results"][0].get("member", [])
+        new_members = [m for m in current if m.get("name") != member]
+
+        url = f"https://{self.host}/api/v2/cmdb/firewall/addrgrp/{group}"
+        payload = {"member": new_members}
+
+        r = requests.put(url, headers=self.headers, json=payload, verify=self.verify_ssl)
+        return r.status_code, r.text
+
+    def delete_address(self, name):
+        url = f"https://{self.host}/api/v2/cmdb/firewall/address/{name}"
+        r = requests.delete(url, headers=self.headers, verify=self.verify_ssl)
+        return r.status_code, r.text

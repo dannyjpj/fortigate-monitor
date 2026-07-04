@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
+
 import os
 import sys
+import sqlite3
+import yaml
+from datetime import datetime
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 
-import sqlite3
-import yaml
-from datetime import datetime
 from modules.fortigate_manager import FortiGateManager
 
-BASE = "/opt/fortigate-monitor"
 DB = f"{BASE}/data/traffic.db"
 CONFIG = f"{BASE}/config.yaml"
 
@@ -43,14 +43,21 @@ for srcip, used_bytes in rows:
     obj = f"BLOCK_{srcip}"
 
     cur.execute("""
-    SELECT firewall_synced FROM quota_status
+    SELECT status, firewall_synced
+    FROM quota_status
     WHERE date = ? AND srcip = ?
     """, (today, srcip))
 
     existing = cur.fetchone()
 
-    if existing and existing[0] == 1:
-        continue
+    if existing:
+        status_db, synced = existing
+
+        if status_db == "RELEASED":
+            continue
+
+        if synced == 1:
+            continue
 
     name, s1, b1 = fg.create_address(srcip)
 

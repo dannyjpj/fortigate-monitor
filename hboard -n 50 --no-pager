@@ -1,0 +1,5 @@
+● fortigate-dashboard.service - FortiGate Dashboard
+   Loaded: loaded (/etc/systemd/system/fortigate-dashboard.service; enabled; vendor preset: disabled)
+   Active: activating (auto-restart) (Result: exit-code) since Sat 2026-07-04 08:53:14 UTC; 842ms ago
+  Process: 595707 ExecStart=/opt/fortigate-monitor/venv/bin/python3 /opt/fortigate-monitor/dashboard/app.py [0;1;31m(code=exited, status=1/FAILURE)[0m
+ Main PID: 595707 (code=exited, status=1/FAILURE)
