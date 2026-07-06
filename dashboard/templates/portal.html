@@ -20,7 +20,11 @@
         <tr>
             <td>{{ u["fecha"] }}</td>
             <td>{{ u["usuario"] }}</td>
-            <td>{{ u["password"] }}</td>
+            <td>
+                <span class="password-mask">********</span>
+                <span class="password-real" style="display:none;">{{ u["password"] }}</span>
+                <button type="button" onclick="togglePassword(this)">Mostrar</button>
+            </td>
             <td>
                 <button onclick="resetUser('{{ u['usuario'] }}')">
                     Reset password
@@ -55,6 +59,23 @@ function resetUser(username) {
         alert("Error de comunicacion");
     });
 }
+
+function togglePassword(btn) {
+    const td = btn.parentElement;
+    const mask = td.querySelector(".password-mask");
+    const real = td.querySelector(".password-real");
+
+    if (real.style.display === "none") {
+        mask.style.display = "none";
+        real.style.display = "inline";
+        btn.textContent = "Ocultar";
+    } else {
+        mask.style.display = "inline";
+        real.style.display = "none";
+        btn.textContent = "Mostrar";
+    }
+}
+
 </script>
 
 {% endblock %}

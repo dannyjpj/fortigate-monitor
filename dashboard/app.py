@@ -118,8 +118,9 @@ def quotas():
 
     cur.execute("""
         SELECT date, srcip, used_gb, limit_gb, status,
-               blocked_at, firewall_object, firewall_synced
+           blocked_at, firewall_object, firewall_synced
         FROM quota_status
+        WHERE status='BLOCKED'
         ORDER BY used_gb DESC
     """)
 
@@ -252,9 +253,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=5000,
-        debug=False,
-        ssl_context=(
-            "/opt/fortigate-monitor/certs/dashboard.crt",
-            "/opt/fortigate-monitor/certs/dashboard.key"
-        )
+        debug=False
     )

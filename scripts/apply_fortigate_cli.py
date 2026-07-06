@@ -14,8 +14,10 @@ port = str(config["fortigate"].get("ssh_port", 22))
 
 cmd = [
     "ssh",
+    "-i", "/root/.ssh/fortigate_monitor",
     "-p", port,
     "-o", "StrictHostKeyChecking=accept-new",
+    "-o", "IdentitiesOnly=yes",
     f"{user}@{host}"
 ]
 

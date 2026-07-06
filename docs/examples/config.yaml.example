@@ -1,0 +1,14 @@
+general:
+  log_file: /var/log/fortigate.log
+  database: /opt/fortigate-monitor/data/fortigate.db
+  log_level: INFO
+
+networks:
+  - name: Gestion
+    subnet: 10.0.100.0/24
+
+fortigate:
+  name: FGT_OLGUIN
+
+collector:
+  flush_interval: 30

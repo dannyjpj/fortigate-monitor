@@ -51,8 +51,10 @@ with open(CLI, "w") as f:
 
 cmd = [
     "ssh",
+    "-i", "/root/.ssh/fortigate_monitor",
     "-p", ssh_port,
     "-o", "StrictHostKeyChecking=accept-new",
+    "-o", "IdentitiesOnly=yes",
     f"{ssh_user}@{host}",
 ]
 
