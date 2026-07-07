@@ -2,97 +2,117 @@
 
 {% block content %}
 
-<h1>FortiGate Monitor</h1>
+<section class="ops-hero">
+    <div>
+        <span class="eyebrow">Firewall</span>
+        <h1>{{ firewall }}</h1>
+        <p>Vista ejecutiva del trafico, actividad y superficie de red monitoreada.</p>
+    </div>
+    <div class="ops-status">
+        <span class="health-badge">Firewall Online</span>
+        <strong>Actualizacion automatica</strong>
+        <small>cada 5 segundos</small>
+    </div>
+</section>
 
-<div class="subtitle">
-    Firewall: <strong>{{ firewall }}</strong>
+<div class="executive-grid">
+    <div class="exec-card primary">
+        <span>Postura general</span>
+        <strong>Operativa</strong>
+        <small>Sin alertas criticas visibles</small>
+    </div>
+    <div class="exec-card">
+        <span>Sesiones</span>
+        <strong id="sesiones_exec">{{ summary.sesiones }}</strong>
+        <small>Conexiones registradas</small>
+    </div>
+    <div class="exec-card">
+        <span>Trafico</span>
+        <strong id="trafico_exec">{{ summary.bytes | bytes }}</strong>
+        <small>Volumen acumulado</small>
+    </div>
+    <div class="exec-card">
+        <span>Aplicaciones</span>
+        <strong id="apps_exec">{{ summary.aplicaciones }}</strong>
+        <small>Firmas detectadas</small>
+    </div>
 </div>
 
-<div class="cards">
-
+<div class="cards metric-grid compact">
     <div class="card">
-        <div class="title">Equipos</div>
+        <div class="title">Equipos Activos</div>
         <div class="number" id="equipos">{{ equipos }}</div>
+        <span class="card-meta">Origenes detectados</span>
     </div>
 
     <div class="card">
         <div class="title">Servicios</div>
         <div class="number" id="servicios">{{ servicios }}</div>
+        <span class="card-meta">Protocolos en uso</span>
     </div>
 
     <div class="card">
         <div class="title">Destinos</div>
         <div class="number" id="destinos">{{ destinos }}</div>
+        <span class="card-meta">IPs remotas</span>
     </div>
 
     <div class="card">
         <div class="title">Redes</div>
         <div class="number" id="redes">{{ redes }}</div>
+        <span class="card-meta">Segmentos internos</span>
     </div>
-
 </div>
-<hr>
 
-<h2>Top Equipos</h2>
+<section class="panel table-panel">
+    <div class="section-title"><h2>Top Equipos</h2><span>Hosts con mayor consumo</span></div>
+    {% include "top_ips.html" %}
+</section>
 
-{% include "top_ips.html" %}
+<section class="panel table-panel">
+    <div class="section-title"><h2>Top Servicios</h2><span>Servicios mas utilizados</span></div>
+    {% include "top_services.html" %}
+</section>
 
-<hr>
+<section class="panel table-panel">
+    <div class="section-title"><h2>Top Destinos</h2><span>Destinos mas frecuentes</span></div>
+    {% include "top_destinations.html" %}
+</section>
 
-<h2>Top Servicios</h2>
+<section class="panel table-panel">
+    <div class="section-title"><h2>Top Politicas</h2><span>Reglas con mayor actividad</span></div>
+    {% include "top_policies.html" %}
+</section>
 
-{% include "top_services.html" %}
+<section class="panel table-panel">
+    <div class="section-title"><h2>Trafico por Red</h2><span>Resumen por segmento</span></div>
+    {% include "top_networks.html" %}
+</section>
 
-<hr>
-
-<h2>Top Destinos</h2>
-
-{% include "top_destinations.html" %}
-
-<hr>
-
-<h2>Top Políticas</h2>
-
-{% include "top_policies.html" %}
-
-<hr>
-
-<h2>Tráfico por Red</h2>
-
-{% include "top_networks.html" %}
-
-<hr>
-
-<div class="cards">
-
+<div class="cards metric-grid">
     <div class="card">
         <div class="title">Sesiones</div>
-        <div class="number" id="sesiones">
-            {{ summary.sesiones }}
-        </div>
+        <div class="number" id="sesiones">{{ summary.sesiones }}</div>
+        <span class="card-meta">Conexiones registradas</span>
     </div>
 
     <div class="card">
-        <div class="title">Tráfico Total</div>
-        <div class="number" id="trafico">
-            {{ summary.bytes | bytes }}
-        </div>
+        <div class="title">Trafico Total</div>
+        <div class="number" id="trafico">{{ summary.bytes | bytes }}</div>
+        <span class="card-meta">Volumen acumulado</span>
     </div>
 
     <div class="card">
         <div class="title">Aplicaciones</div>
-        <div class="number" id="apps">
-            {{ summary.aplicaciones }}
-        </div>
+        <div class="number" id="apps">{{ summary.aplicaciones }}</div>
+        <span class="card-meta">Firmas detectadas</span>
     </div>
 
     <div class="card">
-        <div class="title">Políticas</div>
-        <div class="number" id="politicas">
-            {{ summary.politicas }}
-        </div>
+        <div class="title">Politicas</div>
+        <div class="number" id="politicas">{{ summary.politicas }}</div>
+        <span class="card-meta">Reglas activas</span>
     </div>
-
 </div>
 
 {% endblock %}

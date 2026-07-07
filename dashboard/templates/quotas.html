@@ -2,93 +2,104 @@
 
 {% block content %}
 
-<h1>Gestión de Cuotas</h1>
+<div class="page-header">
+    <div>
+        <span class="eyebrow">Control de consumo</span>
+        <h1>Gestion de Cuotas</h1>
+    </div>
+    <a class="ghost-link" href="/">Volver al Dashboard</a>
+</div>
 
-<p>
-    <a href="/">← Volver al Dashboard</a>
-</p>
+<section class="panel">
+    <div class="section-title">
+        <h2>IPs bloqueadas</h2>
+        <span>Dispositivos que superaron el limite configurado</span>
+    </div>
 
-<table border="1" cellpadding="8" cellspacing="0" width="100%">
-    <thead>
-        <tr>
-            <th>Fecha</th>
-            <th>IP</th>
-            <th>Consumo</th>
-            <th>Límite</th>
-            <th>Estado</th>
-            <th>Firewall</th>
-            <th>Bloqueado</th>
-            <th>Acción</th>
-        </tr>
-    </thead>
+    <div class="quota-summary">
+        <div>
+            <span>Bloqueos activos</span>
+            <strong>{{ quotas|length }}</strong>
+        </div>
+        <div>
+            <span>Politica</span>
+            <strong>2GB</strong>
+        </div>
+        <div>
+            <span>Accion disponible</span>
+            <strong>Liberar IP</strong>
+        </div>
+    </div>
 
-    <tbody>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>IP</th>
+                <th>Consumo</th>
+                <th>Limite</th>
+                <th>Estado</th>
+                <th>Firewall</th>
+                <th>Bloqueado</th>
+                <th>Accion</th>
+            </tr>
+        </thead>
 
-    {% for q in quotas %}
-
-        <tr>
-
-            <td>{{ q["date"] }}</td>
-
-            <td>{{ q["srcip"] }}</td>
-
-            <td>{{ q["used_gb"] }} GB</td>
-
-            <td>{{ q["limit_gb"] }} GB</td>
-
-            <td>
-
-                {% if q["status"] == "BLOCKED" %}
-                    🔴 {{ q["status"] }}
-                {% elif q["status"] == "RELEASED" %}
-                    🟢 {{ q["status"] }}
-                {% else %}
-                    {{ q["status"] }}
-                {% endif %}
-
-            </td>
-
-            <td>
-
-                {% if q["firewall_synced"] == 1 %}
-                    ✅ {{ q["firewall_object"] }}
-                {% else %}
-                    —
-                {% endif %}
-
-            </td>
-
-            <td>{{ q["blocked_at"] or "-" }}</td>
-
-            <td>
-
-                {% if q["status"] == "BLOCKED" %}
-
-                    <button onclick="releaseIP('{{ q['srcip'] }}')">
-                        🔓 Liberar
-                    </button>
-
-                {% else %}
-
-                    —
-
-                {% endif %}
-
-            </td>
-
-        </tr>
-
-    {% endfor %}
-
-    </tbody>
-
-</table>
+        <tbody>
+        {% for q in quotas %}
+            {% set limit = q["limit_gb"]|float %}
+            {% set used = q["used_gb"]|float %}
+            {% set percent = ((used / limit) * 100) if limit > 0 else 0 %}
+            {% set capped = 100 if percent > 100 else percent %}
+            <tr>
+                <td data-label="Fecha">{{ q["date"] }}</td>
+                <td data-label="IP">{{ q["srcip"] }}</td>
+                <td data-label="Consumo">
+                    <div class="quota-usage">
+                        <strong>{{ q["used_gb"] }} GB</strong>
+                        <span>{{ "%.0f"|format(percent) }}%</span>
+                        <div class="usage-bar" style="--usage: {{ capped }}%;"></div>
+                    </div>
+                </td>
+                <td data-label="Limite">{{ q["limit_gb"] }} GB</td>
+                <td data-label="Estado">
+                    {% if q["status"] == "BLOCKED" %}
+                        <span class="badge danger">{{ q["status"] }}</span>
+                    {% elif q["status"] == "RELEASED" %}
+                        <span class="badge ok">{{ q["status"] }}</span>
+                    {% else %}
+                        <span class="badge">{{ q["status"] }}</span>
+                    {% endif %}
+                </td>
+                <td data-label="Firewall">
+                    {% if q["firewall_synced"] == 1 %}
+                        <span class="badge ok">{{ q["firewall_object"] }}</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td data-label="Bloqueado">{{ q["blocked_at"] or "-" }}</td>
+                <td data-label="Accion">
+                    {% if q["status"] == "BLOCKED" %}
+                        <button onclick="releaseIP('{{ q['srcip'] }}')">Liberar</button>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        {% if quotas|length == 0 %}
+            <tr class="empty-row">
+                <td colspan="8">Sin IPs bloqueadas por cuota en este momento.</td>
+            </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</section>
 
 <script>
-
 function releaseIP(ip){
-
-    if(!confirm("¿Desea liberar la IP " + ip + "?")){
+    if(!confirm("Desea liberar la IP " + ip + "?")){
         return;
     }
 
@@ -97,23 +108,19 @@ function releaseIP(ip){
     })
     .then(response => response.json())
     .then(data => {
-
         if(data.status === "ok"){
             alert("IP liberada correctamente");
             location.reload();
         }else{
-            alert("Ocurrió un error");
+            alert("Ocurrio un error");
             console.log(data);
         }
-
     })
     .catch(err=>{
         console.error(err);
-        alert("Error de comunicación con el servidor.");
+        alert("Error de comunicacion con el servidor.");
     });
-
 }
-
 </script>
 
 {% endblock %}

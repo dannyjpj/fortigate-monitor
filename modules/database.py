@@ -1,12 +1,17 @@
 import sqlite3
 
+from modules.audit import ensure_audit_table
+
 DB_FILE = "/opt/fortigate-monitor/data/traffic.db"
 
 
 class Database:
 
     def __init__(self):
-        self.conn = sqlite3.connect(DB_FILE)
+        self.conn = sqlite3.connect(DB_FILE, timeout=30)
+        self.conn.execute("PRAGMA busy_timeout = 30000")
+        self.conn.execute("PRAGMA journal_mode = WAL")
+        self.conn.execute("PRAGMA synchronous = NORMAL")
         self.create_tables()
 
     def create_tables(self):
@@ -43,6 +48,27 @@ class Database:
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_fecha ON traffic(fecha)"
         )
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS quota_status (
+            date TEXT NOT NULL,
+            srcip TEXT NOT NULL,
+            used_bytes INTEGER NOT NULL DEFAULT 0,
+            used_gb REAL NOT NULL DEFAULT 0,
+            limit_gb REAL NOT NULL DEFAULT 2,
+            status TEXT NOT NULL DEFAULT 'BLOCKED',
+            blocked_at TEXT,
+            firewall_object TEXT,
+            firewall_synced INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (date, srcip)
+        )
+        """)
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_quota_status ON quota_status(status)"
+        )
+
+        ensure_audit_table(self.conn)
 
         self.conn.commit()
 

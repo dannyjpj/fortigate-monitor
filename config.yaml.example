@@ -2,6 +2,7 @@ general:
   log_file: /var/log/fortigate.log
   database: /opt/fortigate-monitor/data/fortigate.db
   log_level: INFO
+  timezone: America/Lima
 
 networks:
   - name: Gestion
@@ -12,3 +13,7 @@ fortigate:
 
 collector:
   flush_interval: 30
+
+quota:
+  limit_gb: 2
+  blocked_group: BLOQUEADOS_2GB

@@ -1,7 +1,11 @@
-venv/
 __pycache__/
 *.pyc
-data/
+venv/
+backups/
 logs/
-config.yaml
-*.db
+*.log
+data/*.db
+data/*.db-*
+data/captive_passwords_today.csv
+data/fortigate_reset_passwords.cli
+certs/*.key

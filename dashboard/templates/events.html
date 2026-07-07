@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="ops-hero">
+    <div>
+        <span class="eyebrow">Fase 3</span>
+        <h1>Eventos y Auditoria</h1>
+        <p>Registro operativo de bloqueos, liberaciones, cambios de configuracion y tareas automaticas.</p>
+    </div>
+    <div class="ops-status">
+        <span class="health-badge">Audit Trail</span>
+        <strong>{{ checked_at }}</strong>
+        <small>Ultimos {{ summary.total }} eventos</small>
+    </div>
+</section>
+
+<div class="executive-grid clients-summary">
+    <div class="exec-card primary">
+        <span>Eventos</span>
+        <strong>{{ summary.total }}</strong>
+        <small>Registros recientes</small>
+    </div>
+    <div class="exec-card">
+        <span>Informativos</span>
+        <strong>{{ summary.info }}</strong>
+        <small>Operacion normal</small>
+    </div>
+    <div class="exec-card">
+        <span>Advertencias</span>
+        <strong>{{ summary.warnings }}</strong>
+        <small>Requieren seguimiento</small>
+    </div>
+    <div class="exec-card">
+        <span>Errores</span>
+        <strong>{{ summary.errors }}</strong>
+        <small>Requieren accion</small>
+    </div>
+</div>
+
+<section class="panel">
+    <div class="section-title">
+        <h2>Timeline operativo</h2>
+        <span>Eventos ordenados por hora</span>
+    </div>
+
+    <div class="event-timeline">
+        {% for event in events %}
+            <article class="event-item {{ event.severity }}">
+                <div class="event-dot"></div>
+                <div class="event-body">
+                    <div class="event-head">
+                        <strong>{{ event.message }}</strong>
+                        <span class="badge {{ 'danger' if event.severity == 'error' else 'ok' if event.severity == 'info' else '' }}">
+                            {{ event.severity }}
+                        </span>
+                    </div>
+                    <div class="event-meta">
+                        <span>{{ event.created_at }}</span>
+                        <span>{{ event.event_type }}</span>
+                        {% if event.actor %}<span>Actor: {{ event.actor }}</span>{% endif %}
+                        {% if event.target %}<span>Target: {{ event.target }}</span>{% endif %}
+                    </div>
+                </div>
+            </article>
+        {% endfor %}
+        {% if events|length == 0 %}
+            <div class="empty-state">Aun no hay eventos registrados.</div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="ops-hero health-hero">
+    <div>
+        <span class="eyebrow">Fase 1</span>
+        <h1>Health Center</h1>
+        <p>Estado operativo del collector, dashboard, base de datos, cuota y conectividad con FortiGate.</p>
+    </div>
+    <div class="ops-status">
+        {% if overall_ok %}
+            <span class="health-badge">Sistema Operativo</span>
+        {% else %}
+            <span class="badge danger">Revisar Sistema</span>
+        {% endif %}
+        <strong>{{ checked_at }}</strong>
+        <small>{{ timezone }}</small>
+    </div>
+</section>
+
+<div class="health-grid">
+    <section class="health-card {{ 'ok' if fg.ok else 'danger' }}">
+        <span>FortiGate</span>
+        <strong>{{ fg.name }}</strong>
+        <small>{{ fg.host }}</small>
+        <div class="health-meta">{{ fg.detail }}</div>
+    </section>
+
+    <section class="health-card {{ 'ok' if db.ok else 'danger' }}">
+        <span>Base de datos</span>
+        <strong>{{ db.size_mb }} MB</strong>
+        <small>{{ db.path }}</small>
+        <div class="health-meta">{{ db.traffic_rows }} registros de trafico</div>
+    </section>
+
+    <section class="health-card ok">
+        <span>Cuota activa</span>
+        <strong>{{ quota.limit_gb }} GB</strong>
+        <small>{{ quota.blocked_group }}</small>
+        <div class="health-meta">{{ quota.over_limit|length }} IPs sobre limite</div>
+    </section>
+
+    <section class="health-card {{ 'ok' if purge_timer.ok else 'danger' }}">
+        <span>Reset diario</span>
+        <strong>{{ purge_timer.state }}</strong>
+        <small>{{ purge_timer.name }}</small>
+        <div class="health-meta">{{ purge_timer.detail }}</div>
+    </section>
+</div>
+
+<section class="panel">
+    <div class="section-title">
+        <h2>Servicios</h2>
+        <span>Procesos principales del appliance</span>
+    </div>
+    <div class="status-list">
+        {% for service in services %}
+            <div class="status-row">
+                <div>
+                    <strong>{{ service.name }}</strong>
+                    <small>{{ service.detail or "systemd" }}</small>
+                </div>
+                <span class="badge {{ 'ok' if service.ok else 'danger' }}">{{ service.state }}</span>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="two-column">
+    <section class="panel">
+        <div class="section-title">
+            <h2>Redes monitoreadas</h2>
+            <span>Segmentos aceptados por collector</span>
+        </div>
+        <div class="status-list">
+            {% for network in networks %}
+                <div class="status-row">
+                    <div>
+                        <strong>{{ network.name }}</strong>
+                        <small>{{ network.subnet }}</small>
+                    </div>
+                    <span class="badge ok">Activo</span>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="section-title">
+            <h2>IPs sobre cuota</h2>
+            <span>Top actual del dia</span>
+        </div>
+        <div class="status-list">
+            {% if quota.over_limit %}
+                {% for row in quota.over_limit %}
+                    <div class="status-row">
+                        <div>
+                            <strong>{{ row.srcip }}</strong>
+                            <small>Consumo diario</small>
+                        </div>
+                        <span class="badge danger">{{ row.used_gb }} GB</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">No hay IPs sobre el limite actual.</div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+{% endblock %}

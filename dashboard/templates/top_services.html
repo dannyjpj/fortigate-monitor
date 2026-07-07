@@ -11,9 +11,9 @@
 
 {% for row in dashboard.top_services %}
 <tr>
-    <td>{{ row.service }}</td>
-    <td>{{ row.conexiones }}</td>
-    <td>{{ row.bytes | bytes }}</td>
+    <td data-label="Servicio">{{ row.service }}</td>
+    <td data-label="Conexiones">{{ row.conexiones }}</td>
+    <td data-label="Trafico">{{ row.bytes | bytes }}</td>
 </tr>
 {% endfor %}
 

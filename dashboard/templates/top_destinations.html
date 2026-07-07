@@ -12,9 +12,9 @@
 
 {% for row in dashboard.top_destinations %}
 <tr>
-    <td>{{ row.dstip }}</td>
-    <td>{{ row.conexiones }}</td>
-    <td>{{ row.bytes | bytes }}</td>
+    <td data-label="Destino">{{ row.dstip }}</td>
+    <td data-label="Conexiones">{{ row.conexiones }}</td>
+    <td data-label="Trafico">{{ row.bytes | bytes }}</td>
 </tr>
 {% endfor %}
 

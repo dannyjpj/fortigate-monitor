@@ -3,44 +3,62 @@ async function actualizarDashboard() {
     const r = await fetch("/api/dashboard");
     const data = await r.json();
 
-    document.getElementById("equipos").innerText = data.equipos;
-    document.getElementById("sesiones").innerText = data.summary.sesiones;
-    document.getElementById("apps").innerText = data.summary.aplicaciones;
-    document.getElementById("politicas").innerText = data.summary.politicas;
-    document.getElementById("trafico").innerText = formatBytes(data.summary.bytes);
-    document.getElementById("servicios").innerText = data.servicios;
-    document.getElementById("destinos").innerText = data.destinos;
-    document.getElementById("redes").innerText = data.redes;
+    actualizarTexto("equipos", data.equipos);
+    actualizarTexto("sesiones", data.summary.sesiones);
+    actualizarTexto("apps", data.summary.aplicaciones);
+    actualizarTexto("politicas", data.summary.politicas);
+    actualizarTexto("trafico", formatBytes(data.summary.bytes));
+    actualizarTexto("servicios", data.servicios);
+    actualizarTexto("destinos", data.destinos);
+    actualizarTexto("redes", data.redes);
+
+    actualizarTexto("sesiones_exec", data.summary.sesiones);
+    actualizarTexto("trafico_exec", formatBytes(data.summary.bytes));
+    actualizarTexto("apps_exec", data.summary.aplicaciones);
 
     actualizarTabla(
         "tabla_ips",
         data.dashboard.top_ips,
-        ["srcip","srcname","network","bytes"]
+        ["srcip","srcname","network","bytes"],
+        ["IP","Nombre","Red","Bytes"]
     );
 
     actualizarTabla(
         "tabla_services",
         data.dashboard.top_services,
-        ["service","conexiones","bytes"]
+        ["service","conexiones","bytes"],
+        ["Servicio","Conexiones","Trafico"]
     );
 
     actualizarTabla(
         "tabla_destinations",
         data.dashboard.top_destinations,
-        ["dstip","conexiones","bytes"]
+        ["dstip","conexiones","bytes"],
+        ["Destino","Conexiones","Trafico"]
     );
 
     actualizarTabla(
         "tabla_policies",
         data.dashboard.top_policies,
-        ["policyname","conexiones","bytes"]
+        ["policyname","conexiones","bytes"],
+        ["Politica","Conexiones","Trafico"]
     );
 
     actualizarTabla(
         "tabla_networks",
         data.dashboard.traffic_networks,
-        ["network","conexiones","bytes"]
+        ["network","conexiones","bytes"],
+        ["Red","Conexiones","Trafico"]
     );
+}
+
+function actualizarTexto(id, valor){
+
+    const el = document.getElementById(id);
+
+    if (el)
+        el.innerText = valor;
+
 }
 
 function formatBytes(bytes){
@@ -64,7 +82,7 @@ function formatBytes(bytes){
 
 }
 
-function actualizarTabla(id, datos, columnas){
+function actualizarTabla(id, datos, columnas, etiquetas){
 
     const tbody = document.getElementById(id);
 
@@ -77,9 +95,10 @@ function actualizarTabla(id, datos, columnas){
 
         const tr = document.createElement("tr");
 
-        columnas.forEach(col => {
+        columnas.forEach((col, index) => {
 
             const td = document.createElement("td");
+            td.dataset.label = etiquetas[index] || col;
 
             let valor = fila[col];
 
@@ -104,3 +123,20 @@ function actualizarTabla(id, datos, columnas){
 actualizarDashboard();
 
 setInterval(actualizarDashboard, 5000);
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const toggle = document.querySelector(".menu-toggle");
+    const nav = document.getElementById("primary-nav");
+
+    if (!toggle || !nav)
+        return;
+
+    toggle.addEventListener("click", () => {
+
+        const open = nav.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+
+    });
+
+});

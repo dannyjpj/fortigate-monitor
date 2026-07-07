@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="ops-hero">
+    <div>
+        <span class="eyebrow">Fase 2</span>
+        <h1>Clientes</h1>
+        <p>Inventario operativo de equipos detectados por trafico diario, con estado de cuota y consumo por IP.</p>
+    </div>
+    <div class="ops-status">
+        <span class="health-badge">Actualizado</span>
+        <strong>{{ checked_at }}</strong>
+        <small>Limite {{ quota.limit_gb }} GB</small>
+    </div>
+</section>
+
+<div class="executive-grid clients-summary">
+    <div class="exec-card primary">
+        <span>Clientes detectados</span>
+        <strong>{{ summary.total }}</strong>
+        <small>IPs con trafico hoy</small>
+    </div>
+    <div class="exec-card">
+        <span>Normales</span>
+        <strong>{{ summary.normal }}</strong>
+        <small>Bajo el 80% de cuota</small>
+    </div>
+    <div class="exec-card">
+        <span>En alerta</span>
+        <strong>{{ summary.warning }}</strong>
+        <small>Sobre 80% del limite</small>
+    </div>
+    <div class="exec-card">
+        <span>Bloqueados</span>
+        <strong>{{ summary.blocked }}</strong>
+        <small>Sincronizados por cuota</small>
+    </div>
+</div>
+
+<section class="panel table-panel">
+    <div class="section-title">
+        <h2>Inventario de clientes</h2>
+        <span>Consumo diario por IP</span>
+    </div>
+
+    <table class="clients-table">
+        <thead>
+            <tr>
+                <th>Estado</th>
+                <th>IP</th>
+                <th>Nombre</th>
+                <th>Red</th>
+                <th>Consumo</th>
+                <th>Sesiones</th>
+                <th>Ultimo trafico</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td data-label="Estado">
+                    <span class="client-state {{ client.status }}">
+                        <span></span>{{ client.status_label }}
+                    </span>
+                </td>
+                <td data-label="IP"><strong>{{ client.srcip }}</strong></td>
+                <td data-label="Nombre">{{ client.srcname }}</td>
+                <td data-label="Red"><span class="badge ok">{{ client.network }}</span></td>
+                <td data-label="Consumo">
+                    <div class="quota-usage client-usage">
+                        <strong>{{ client.used_label }}</strong>
+                        <span>{{ client.percent }}%</span>
+                        <div class="usage-bar {{ client.status }}" style="--usage: {{ client.capped }}%;"></div>
+                    </div>
+                </td>
+                <td data-label="Sesiones">{{ client.sessions }}</td>
+                <td data-label="Ultimo trafico">{{ client.last_seen or "-" }}</td>
+            </tr>
+            {% endfor %}
+            {% if clients|length == 0 %}
+            <tr class="empty-row">
+                <td colspan="7">No hay clientes detectados para el dia actual.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</section>
+
+{% endblock %}

@@ -6,7 +6,8 @@ DB_FILE = "/opt/fortigate-monitor/data/traffic.db"
 class Reports:
 
     def __init__(self):
-        self.conn = sqlite3.connect(DB_FILE)
+        self.conn = sqlite3.connect(DB_FILE, timeout=30)
+        self.conn.execute("PRAGMA busy_timeout = 30000")
         self.conn.row_factory = sqlite3.Row
 
     def top_ips(self, limit=10):

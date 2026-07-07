@@ -1,39 +1,50 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>Portal Cautivo</h1>
+<div class="page-header">
+    <div>
+        <span class="eyebrow">Usuarios temporales</span>
+        <h1>Portal Cautivo</h1>
+    </div>
+    <div class="actions">
+        <a class="ghost-link" href="/">Volver al Dashboard</a>
+        <a class="button-link" href="/download/captive-passwords">Descargar CSV</a>
+    </div>
+</div>
 
-<p><a href="/">Volver al Dashboard</a></p>
-<p><a href="/download/captive-passwords">Descargar CSV</a></p>
+<section class="panel">
+    <div class="section-title">
+        <h2>Credenciales del dia</h2>
+        <span>Gestion de passwords sincronizados con FortiGate</span>
+    </div>
 
-<table border="1" cellpadding="8" cellspacing="0" width="100%">
-    <thead>
-        <tr>
-            <th>Fecha</th>
-            <th>Usuario</th>
-            <th>Password</th>
-            <th>Accion</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for u in users %}
-        <tr>
-            <td>{{ u["fecha"] }}</td>
-            <td>{{ u["usuario"] }}</td>
-            <td>
-                <span class="password-mask">********</span>
-                <span class="password-real" style="display:none;">{{ u["password"] }}</span>
-                <button type="button" onclick="togglePassword(this)">Mostrar</button>
-            </td>
-            <td>
-                <button onclick="resetUser('{{ u['usuario'] }}')">
-                    Reset password
-                </button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Password</th>
+                <th>Accion</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td data-label="Fecha">{{ u["fecha"] }}</td>
+                <td data-label="Usuario">{{ u["usuario"] }}</td>
+                <td data-label="Password">
+                    <span class="password-mask">********</span>
+                    <span class="password-real" style="display:none;">{{ u["password"] }}</span>
+                    <button type="button" onclick="togglePassword(this)">Mostrar</button>
+                </td>
+                <td data-label="Accion">
+                    <button onclick="resetUser('{{ u['usuario'] }}')">Reset password</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
 
 <script>
 function resetUser(username) {
@@ -75,7 +86,6 @@ function togglePassword(btn) {
         btn.textContent = "Mostrar";
     }
 }
-
 </script>
 
 {% endblock %}

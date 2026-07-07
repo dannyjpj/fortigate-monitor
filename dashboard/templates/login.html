@@ -2,23 +2,62 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - FortiGate Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
-    <h2>Acceso Administrador</h2>
+<body class="login-page">
+    <main class="login-shell">
+        <section class="login-panel">
+            <div class="login-brand">
+                <span class="brand-mark">FG</span>
+                <div>
+                    <strong>FortiGate Monitor</strong>
+                    <small>Acceso administrativo seguro</small>
+                </div>
+            </div>
 
-    {% if error %}
-        <p style="color:red;">{{ error }}</p>
-    {% endif %}
+            <div class="login-copy">
+                <span class="status-pill">Gateway protegido</span>
+                <h1>Acceso Administrador</h1>
+                <p>Ingrese sus credenciales para revisar trafico, cuotas y usuarios del portal cautivo.</p>
+            </div>
 
-    <form method="post">
-        <label>Usuario</label><br>
-        <input type="text" name="username"><br><br>
+            {% if error %}
+                <div class="alert-error">{{ error }}</div>
+            {% endif %}
 
-        <label>Contraseña</label><br>
-        <input type="password" name="password"><br><br>
+            <form class="login-form" method="post">
+                <label for="username">Usuario</label>
+                <input id="username" type="text" name="username" autocomplete="username" autofocus>
 
-        <button type="submit">Ingresar</button>
-    </form>
+                <label for="password">Contrasena</label>
+                <input id="password" type="password" name="password" autocomplete="current-password">
+
+                <button type="submit">Ingresar al monitor</button>
+            </form>
+        </section>
+
+        <aside class="login-aside">
+            <div class="security-grid">
+                <div>
+                    <span>Estado</span>
+                    <strong>Online</strong>
+                </div>
+                <div>
+                    <span>Zona</span>
+                    <strong>LAN</strong>
+                </div>
+                <div>
+                    <span>Control</span>
+                    <strong>Cuotas</strong>
+                </div>
+                <div>
+                    <span>Portal</span>
+                    <strong>Cautivo</strong>
+                </div>
+            </div>
+        </aside>
+    </main>
 </body>
 </html>

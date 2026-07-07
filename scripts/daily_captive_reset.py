@@ -4,7 +4,14 @@ import yaml
 import secrets
 import string
 import subprocess
-from datetime import datetime
+import os
+import sys
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+
+from modules.timezone import local_date
+from modules.audit import log_event
 
 BASE = "/opt/fortigate-monitor"
 CONFIG = f"{BASE}/config.yaml"
@@ -27,7 +34,7 @@ host = fg["host"]
 ssh_user = fg.get("ssh_user", "admin")
 ssh_port = str(fg.get("ssh_port", 22))
 
-today = datetime.now().strftime("%Y-%m-%d")
+today = local_date()
 
 passwords = []
 
@@ -67,3 +74,10 @@ if result.returncode != 0:
 
 print("Reset diario aplicado correctamente")
 print(CSV)
+log_event(
+    f"{BASE}/data/traffic.db",
+    "portal_password_rotation",
+    f"Rotacion diaria de passwords aplicada a {len(users)} usuarios",
+    severity="info",
+    details={"users": len(users), "csv": CSV}
+)

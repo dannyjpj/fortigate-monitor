@@ -3,7 +3,13 @@
 import yaml
 import secrets
 import string
-from datetime import datetime
+import os
+import sys
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+
+from modules.timezone import local_date
 
 CONFIG = "/opt/fortigate-monitor/config.yaml"
 OUTPUT = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
@@ -19,7 +25,7 @@ config = yaml.safe_load(open(CONFIG))
 users = config["captive_portal"]["users"]
 length = config["captive_portal"].get("password_length", 10)
 
-today = datetime.now().strftime("%Y-%m-%d")
+today = local_date()
 
 with open(OUTPUT, "w") as f:
     f.write("fecha,usuario,password\n")
