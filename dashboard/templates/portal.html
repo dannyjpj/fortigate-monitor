@@ -1,18 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="page-header">
+<section class="ops-hero">
     <div>
-        <span class="eyebrow">Usuarios temporales</span>
+        <span class="eyebrow">Fase 6</span>
         <h1>Portal Cautivo</h1>
+        <p>Administracion de usuarios temporales, passwords diarios y rotaciones sincronizadas por SSH contra FortiGate.</p>
     </div>
-    <div class="actions">
-        <a class="ghost-link" href="/">Volver al Dashboard</a>
-        <a class="button-link" href="/download/captive-passwords">Descargar CSV</a>
+    <div class="ops-status">
+        <span class="health-badge">Actualizado</span>
+        <strong>{{ checked_at }}</strong>
+        <small>{{ summary.csv_file }}</small>
+    </div>
+</section>
+
+<div class="executive-grid clients-summary">
+    <div class="exec-card primary">
+        <span>Usuarios</span>
+        <strong>{{ summary.users }}</strong>
+        <small>Credenciales disponibles</small>
+    </div>
+    <div class="exec-card">
+        <span>Ultima rotacion</span>
+        <strong>{{ summary.last_rotation }}</strong>
+        <small>Fecha registrada en CSV</small>
+    </div>
+    <div class="exec-card">
+        <span>Longitud</span>
+        <strong>{{ summary.password_length }}</strong>
+        <small>Caracteres por password</small>
+    </div>
+    <div class="exec-card">
+        <span>Archivo</span>
+        <strong>{{ "OK" if summary.csv_exists else "No existe" }}</strong>
+        <small>captive_passwords_today.csv</small>
     </div>
 </div>
 
 <section class="panel">
+    <div class="section-title">
+        <h2>Acciones operativas</h2>
+        <span>Rotacion manual y descarga para recepcion</span>
+    </div>
+    <div class="action-strip">
+        <button type="button" onclick="rotateAllUsers()">Rotar todos ahora</button>
+        <a class="button-link" href="/download/captive-passwords">Descargar CSV</a>
+        <a class="ghost-link" href="/events">Ver auditoria</a>
+        <a class="ghost-link" href="/settings">Editar longitud</a>
+    </div>
+</section>
+
+<section class="panel table-panel">
     <div class="section-title">
         <h2>Credenciales del dia</h2>
         <span>Gestion de passwords sincronizados con FortiGate</span>
@@ -31,7 +69,7 @@
             {% for u in users %}
             <tr>
                 <td data-label="Fecha">{{ u["fecha"] }}</td>
-                <td data-label="Usuario">{{ u["usuario"] }}</td>
+                <td data-label="Usuario"><strong>{{ u["usuario"] }}</strong></td>
                 <td data-label="Password">
                     <span class="password-mask">********</span>
                     <span class="password-real" style="display:none;">{{ u["password"] }}</span>
@@ -42,6 +80,11 @@
                 </td>
             </tr>
             {% endfor %}
+            {% if users|length == 0 %}
+            <tr class="empty-row">
+                <td colspan="4">No hay credenciales generadas para el dia actual.</td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
 </section>
@@ -52,23 +95,33 @@ function resetUser(username) {
         return;
     }
 
-    fetch("/api/portal/reset/" + username, {
-        method: "POST"
-    })
+    fetch("/api/portal/reset/" + username, { method: "POST" })
     .then(r => r.json())
     .then(data => {
         if (data.status === "ok") {
-            alert("Password actualizado para " + username);
             location.reload();
         } else {
             alert("Error reseteando password");
-            console.log(data);
         }
     })
-    .catch(err => {
-        console.error(err);
-        alert("Error de comunicacion");
-    });
+    .catch(() => alert("Error de comunicacion"));
+}
+
+function rotateAllUsers() {
+    if (!confirm("Rotar passwords de todos los usuarios temporales?")) {
+        return;
+    }
+
+    fetch("/api/portal/rotate-all", { method: "POST" })
+    .then(r => r.json().then(data => ({ ok: r.ok, data })))
+    .then(result => {
+        if (result.ok && result.data.status === "ok") {
+            location.reload();
+        } else {
+            alert(result.data.message || "No se pudo completar la rotacion");
+        }
+    })
+    .catch(() => alert("Error de comunicacion"));
 }
 
 function togglePassword(btn) {

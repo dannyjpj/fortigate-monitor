@@ -1,7 +1,16 @@
 async function actualizarDashboard() {
 
-    const r = await fetch("/api/dashboard");
-    const data = await r.json();
+    if (!document.getElementById("equipos") && !document.getElementById("tabla_ips"))
+        return;
+
+    let data;
+
+    try {
+        const r = await fetch("/api/dashboard");
+        data = await r.json();
+    } catch (error) {
+        return;
+    }
 
     actualizarTexto("equipos", data.equipos);
     actualizarTexto("sesiones", data.summary.sesiones);
@@ -120,9 +129,10 @@ function actualizarTabla(id, datos, columnas, etiquetas){
 
 }
 
-actualizarDashboard();
-
-setInterval(actualizarDashboard, 5000);
+if (document.getElementById("equipos") || document.getElementById("tabla_ips")) {
+    actualizarDashboard();
+    setInterval(actualizarDashboard, 5000);
+}
 
 document.addEventListener("DOMContentLoaded", () => {
 

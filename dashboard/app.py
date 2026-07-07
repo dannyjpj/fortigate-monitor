@@ -7,11 +7,12 @@ import secrets
 import shutil
 import string
 import subprocess
+from io import StringIO
 from datetime import datetime
 from functools import wraps
 
 from flask import send_file
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, Response
 from werkzeug.security import check_password_hash
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -247,6 +248,23 @@ def quota_health(cfg, db_path):
     return info
 
 
+def monitored_network_for_ip(cfg, ip):
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return "-"
+
+    for item in cfg.get("networks", []):
+        try:
+            network = ipaddress.ip_network(item.get("subnet", ""), strict=False)
+        except ValueError:
+            continue
+        if address in network:
+            return item.get("name") or item.get("subnet")
+
+    return "-"
+
+
 def clients_inventory(cfg):
     db_path = cfg["general"]["database"]
     quota_cfg = cfg.get("quota", {})
@@ -334,6 +352,150 @@ def clients_inventory(cfg):
     return rows, summary
 
 
+def client_detail_data(cfg, ip):
+    db_path = cfg["general"]["database"]
+    quota_cfg = cfg.get("quota", {})
+    limit_gb = float(quota_cfg.get("limit_gb", 2))
+    limit_bytes = limit_gb * 1024 * 1024 * 1024
+    today = local_date()
+
+    conn = sqlite3.connect(db_path, timeout=10)
+    conn.execute("PRAGMA busy_timeout = 10000")
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            COALESCE(MAX(NULLIF(srcname,'')), ?) AS srcname,
+            COALESCE(MAX(NULLIF(network,'')), ?) AS network,
+            SUM(sentbyte + rcvdbyte) AS bytes,
+            SUM(sentbyte) AS sentbyte,
+            SUM(rcvdbyte) AS rcvdbyte,
+            COUNT(*) AS sessions,
+            MIN(hora) AS first_seen,
+            MAX(hora) AS last_seen
+        FROM traffic
+        WHERE fecha = ? AND srcip = ?
+    """, (ip, monitored_network_for_ip(cfg, ip), today, ip))
+    summary = dict(cur.fetchone())
+    summary["srcip"] = ip
+    summary["bytes"] = summary.get("bytes") or 0
+    summary["sentbyte"] = summary.get("sentbyte") or 0
+    summary["rcvdbyte"] = summary.get("rcvdbyte") or 0
+    summary["sessions"] = summary.get("sessions") or 0
+    summary["used_label"] = format_bytes(summary["bytes"])
+    summary["sent_label"] = format_bytes(summary["sentbyte"])
+    summary["received_label"] = format_bytes(summary["rcvdbyte"])
+    summary["percent"] = round((summary["bytes"] / limit_bytes) * 100, 1) if limit_bytes else 0
+    summary["capped"] = min(summary["percent"], 100)
+
+    cur.execute("""
+        SELECT status, blocked_at, firewall_object, firewall_synced, used_gb, limit_gb
+        FROM quota_status
+        WHERE date = ? AND srcip = ?
+        LIMIT 1
+    """, (today, ip))
+    quota_row = cur.fetchone()
+    quota = dict(quota_row) if quota_row else {
+        "status": "NORMAL",
+        "blocked_at": None,
+        "firewall_object": None,
+        "firewall_synced": 0,
+        "used_gb": round(summary["bytes"] / 1024 / 1024 / 1024, 2),
+        "limit_gb": limit_gb
+    }
+
+    def top_query(field, label, limit=10):
+        cur.execute(f"""
+            SELECT
+                COALESCE(NULLIF({field}, ''), '-') AS label,
+                COUNT(*) AS sessions,
+                SUM(sentbyte + rcvdbyte) AS bytes
+            FROM traffic
+            WHERE fecha = ? AND srcip = ?
+            GROUP BY COALESCE(NULLIF({field}, ''), '-')
+            ORDER BY bytes DESC
+            LIMIT ?
+        """, (today, ip, limit))
+        return [
+            {
+                "label": row["label"],
+                "sessions": row["sessions"],
+                "bytes": row["bytes"],
+                "bytes_label": format_bytes(row["bytes"] or 0)
+            }
+            for row in cur.fetchall()
+        ]
+
+    detail = {
+        "summary": summary,
+        "quota": quota,
+        "services": top_query("service", "service"),
+        "destinations": top_query("dstip", "dstip"),
+        "policies": top_query("policyname", "policyname"),
+        "apps": top_query("app", "app")
+    }
+
+    conn.close()
+    return detail
+
+
+def quota_center_data(cfg):
+    db_path = cfg["general"]["database"]
+    limit_gb = float(cfg.get("quota", {}).get("limit_gb", 2))
+    limit_bytes = limit_gb * 1024 * 1024 * 1024
+    today = local_date()
+
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT date, srcip, used_gb, limit_gb, status,
+           blocked_at, firewall_object, firewall_synced
+        FROM quota_status
+        WHERE date = ?
+        ORDER BY
+            CASE status WHEN 'BLOCKED' THEN 0 WHEN 'RELEASED' THEN 1 ELSE 2 END,
+            used_gb DESC
+    """, (today,))
+    rows = [dict(row) for row in cur.fetchall()]
+
+    cur.execute("""
+        SELECT srcip,
+               COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
+               COALESCE(MAX(NULLIF(network,'')), '-') AS network,
+               SUM(sentbyte + rcvdbyte) AS bytes,
+               COUNT(*) AS sessions
+        FROM traffic
+        WHERE fecha = ?
+        GROUP BY srcip
+        HAVING SUM(sentbyte + rcvdbyte) >= ?
+        ORDER BY bytes DESC
+    """, (today, limit_bytes))
+    over_limit = []
+    for row in cur.fetchall():
+        item = dict(row)
+        item["used_gb"] = round((item["bytes"] or 0) / 1024 / 1024 / 1024, 2)
+        item["used_label"] = format_bytes(item["bytes"] or 0)
+        over_limit.append(item)
+
+    conn.close()
+
+    return {
+        "rows": rows,
+        "over_limit": over_limit,
+        "summary": {
+            "blocked": sum(1 for row in rows if row["status"] == "BLOCKED"),
+            "released": sum(1 for row in rows if row["status"] == "RELEASED"),
+            "over_limit": len(over_limit),
+            "limit_gb": limit_gb,
+            "group": cfg.get("quota", {}).get("blocked_group", "-")
+        }
+    }
+
+
 def audit_events(db_path, limit=100):
     conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("PRAGMA busy_timeout = 10000")
@@ -349,6 +511,66 @@ def audit_events(db_path, limit=100):
     rows = [dict(row) for row in cur.fetchall()]
     conn.close()
     return rows
+
+
+def portal_inventory(cfg):
+    csv_file = cfg.get("captive_portal", {}).get(
+        "csv_file",
+        "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    )
+
+    users = []
+    last_rotation = "-"
+
+    if os.path.exists(csv_file):
+        with open(csv_file, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                users.append(row)
+                if row.get("fecha") and (last_rotation == "-" or row["fecha"] > last_rotation):
+                    last_rotation = row["fecha"]
+
+    return users, {
+        "users": len(users),
+        "last_rotation": last_rotation,
+        "csv_file": csv_file,
+        "csv_exists": os.path.exists(csv_file),
+        "password_length": cfg.get("captive_portal", {}).get("password_length", 10)
+    }
+
+
+def diagnostics_data(cfg):
+    db_path = cfg["general"]["database"]
+    checks = []
+
+    def add(name, ok, detail, category="Sistema"):
+        checks.append({
+            "name": name,
+            "ok": bool(ok),
+            "detail": detail,
+            "category": category
+        })
+
+    add("Config YAML", os.path.exists(CONFIG_FILE), CONFIG_FILE, "Archivos")
+    add("Base de datos", os.path.exists(db_path), db_path, "Archivos")
+    add("Directorio data", os.path.isdir(os.path.dirname(db_path)), os.path.dirname(db_path), "Archivos")
+    add("FortiGate host", bool(cfg.get("fortigate", {}).get("host")), cfg.get("fortigate", {}).get("host", "-"), "FortiGate")
+    add("FortiGate API token", bool(cfg.get("fortigate", {}).get("api_token")), "Token configurado" if cfg.get("fortigate", {}).get("api_token") else "Token no configurado", "FortiGate")
+
+    fg = fortigate_health(cfg)
+    add("Address Group de bloqueo", fg["ok"], fg["detail"], "FortiGate")
+
+    for service in ("fortigate-dashboard", "fortigate-monitor", "fortigate-collector"):
+        state = service_state(service)
+        add(service, state["ok"], state["state"], "Servicios")
+
+    purge = timer_state("fortigate-purge.timer")
+    add("fortigate-purge.timer", purge["ok"], f"{purge['state']} / {purge['detail']}", "Servicios")
+
+    db = database_health(db_path)
+    add("SQLite saludable", db["ok"], db["detail"] or f"{db['traffic_rows']} filas de trafico", "Base de datos")
+
+    return checks
 
 
 def login_required(f):
@@ -461,6 +683,26 @@ def clients():
     )
 
 
+@app.route("/clients/<ip>")
+@login_required
+def client_detail(ip):
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return redirect(url_for("clients"))
+
+    cfg = Config().get()
+    detail = client_detail_data(cfg, ip)
+
+    return render_template(
+        "client_detail.html",
+        ip=ip,
+        detail=detail,
+        quota_config=cfg.get("quota", {}),
+        checked_at=local_timestamp()
+    )
+
+
 @app.route("/events")
 @login_required
 def events():
@@ -507,25 +749,57 @@ def api_dashboard():
 @login_required
 def quotas():
     cfg = Config().get()
-    db = cfg["general"]["database"]
+    data = quota_center_data(cfg)
 
-    conn = sqlite3.connect(db, timeout=30)
-    conn.execute("PRAGMA busy_timeout = 30000")
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+    return render_template(
+        "quotas.html",
+        quotas=data["rows"],
+        over_limit=data["over_limit"],
+        summary=data["summary"],
+        checked_at=local_timestamp()
+    )
 
-    cur.execute("""
-        SELECT date, srcip, used_gb, limit_gb, status,
-           blocked_at, firewall_object, firewall_synced
-        FROM quota_status
-        WHERE status='BLOCKED'
-        ORDER BY used_gb DESC
-    """)
 
-    quotas = cur.fetchall()
-    conn.close()
+@app.route("/download/traffic-report.csv")
+@login_required
+def download_traffic_report():
+    cfg = Config().get()
+    rows, _ = clients_inventory(cfg)
+    buffer = StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "fecha",
+        "srcip",
+        "srcname",
+        "network",
+        "used_gb",
+        "used_label",
+        "quota_percent",
+        "status",
+        "sessions",
+        "last_seen"
+    ])
 
-    return render_template("quotas.html", quotas=quotas)
+    for row in rows:
+        writer.writerow([
+            local_date(),
+            row.get("srcip"),
+            row.get("srcname"),
+            row.get("network"),
+            row.get("used_gb"),
+            row.get("used_label"),
+            row.get("percent"),
+            row.get("status_label"),
+            row.get("sessions"),
+            row.get("last_seen")
+        ])
+
+    filename = f"traffic-report-{local_date()}.csv"
+    return Response(
+        buffer.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @app.route("/api/quota/release/<ip>", methods=["POST"])
@@ -585,22 +859,65 @@ def release_quota(ip):
 def settings():
     cfg = Config().get()
     quota_cfg = cfg.setdefault("quota", {})
+    fortigate_cfg = cfg.setdefault("fortigate", {})
+    portal_cfg = cfg.setdefault("captive_portal", {})
+    general_cfg = cfg.setdefault("general", {})
     message = None
     error = None
     backup_path = None
 
     form = {
+        "firewall_name": fortigate_cfg.get("name", ""),
+        "firewall_host": fortigate_cfg.get("host", ""),
+        "ssh_user": fortigate_cfg.get("ssh_user", "admin"),
+        "ssh_port": str(fortigate_cfg.get("ssh_port", 22)),
+        "timezone": general_cfg.get("timezone", "America/Lima"),
+        "password_length": str(portal_cfg.get("password_length", 10)),
         "limit_gb": str(quota_cfg.get("limit_gb", 2)),
         "blocked_group": quota_cfg.get("blocked_group", "BLOQUEADOS_2GB"),
         "networks": config_to_networks_text(cfg)
     }
 
     if request.method == "POST":
+        form["firewall_name"] = request.form.get("firewall_name", "").strip()
+        form["firewall_host"] = request.form.get("firewall_host", "").strip()
+        form["ssh_user"] = request.form.get("ssh_user", "").strip()
+        form["ssh_port"] = request.form.get("ssh_port", "").strip()
+        form["timezone"] = request.form.get("timezone", "").strip()
+        form["password_length"] = request.form.get("password_length", "").strip()
         form["limit_gb"] = request.form.get("limit_gb", "").strip()
         form["blocked_group"] = request.form.get("blocked_group", "").strip()
         form["networks"] = request.form.get("networks", "").strip()
 
         errors = []
+        ssh_port = fortigate_cfg.get("ssh_port", 22)
+        password_length = portal_cfg.get("password_length", 10)
+
+        if not form["firewall_name"]:
+            errors.append("El nombre del FortiGate es obligatorio")
+
+        if not form["firewall_host"]:
+            errors.append("El host/IP del FortiGate es obligatorio")
+
+        if not form["ssh_user"]:
+            errors.append("El usuario SSH es obligatorio")
+
+        try:
+            ssh_port = int(form["ssh_port"])
+            if ssh_port <= 0 or ssh_port > 65535:
+                errors.append("El puerto SSH debe estar entre 1 y 65535")
+        except ValueError:
+            errors.append("El puerto SSH debe ser numerico")
+
+        if not form["timezone"]:
+            errors.append("La zona horaria es obligatoria")
+
+        try:
+            password_length = int(form["password_length"])
+            if password_length < 8 or password_length > 32:
+                errors.append("La longitud de password debe estar entre 8 y 32")
+        except ValueError:
+            errors.append("La longitud de password debe ser numerica")
 
         try:
             limit_gb = float(form["limit_gb"])
@@ -613,7 +930,14 @@ def settings():
             errors.append("El grupo de bloqueo es obligatorio")
         else:
             try:
-                status, _ = FortiGateManager(cfg["fortigate"]).get_group(form["blocked_group"])
+                proposed_fortigate = dict(cfg["fortigate"])
+                proposed_fortigate.update({
+                    "name": form["firewall_name"],
+                    "host": form["firewall_host"],
+                    "ssh_user": form["ssh_user"],
+                    "ssh_port": ssh_port
+                })
+                status, _ = FortiGateManager(proposed_fortigate).get_group(form["blocked_group"])
             except Exception as exc:
                 errors.append(f"No se pudo validar el grupo en FortiGate: {exc}")
             else:
@@ -628,6 +952,14 @@ def settings():
         if errors:
             error = " | ".join(errors)
         else:
+            cfg["fortigate"].update({
+                "name": form["firewall_name"],
+                "host": form["firewall_host"],
+                "ssh_user": form["ssh_user"],
+                "ssh_port": ssh_port
+            })
+            cfg["general"]["timezone"] = form["timezone"]
+            cfg["captive_portal"]["password_length"] = password_length
             cfg["quota"] = {
                 "limit_gb": limit_gb,
                 "blocked_group": form["blocked_group"]
@@ -655,6 +987,12 @@ def settings():
                         "limit_gb": limit_gb,
                         "blocked_group": form["blocked_group"],
                         "networks": networks,
+                        "firewall_name": form["firewall_name"],
+                        "firewall_host": form["firewall_host"],
+                        "ssh_user": form["ssh_user"],
+                        "ssh_port": ssh_port,
+                        "timezone": form["timezone"],
+                        "password_length": password_length,
                         "backup": backup_path,
                         "collector_restarted": restarted
                     }
@@ -662,6 +1000,12 @@ def settings():
 
                 cfg = Config().get()
                 form["networks"] = config_to_networks_text(cfg)
+                form["firewall_name"] = cfg.get("fortigate", {}).get("name", form["firewall_name"])
+                form["firewall_host"] = cfg.get("fortigate", {}).get("host", form["firewall_host"])
+                form["ssh_user"] = cfg.get("fortigate", {}).get("ssh_user", form["ssh_user"])
+                form["ssh_port"] = str(cfg.get("fortigate", {}).get("ssh_port", form["ssh_port"]))
+                form["timezone"] = cfg.get("general", {}).get("timezone", form["timezone"])
+                form["password_length"] = str(cfg.get("captive_portal", {}).get("password_length", form["password_length"]))
                 form["limit_gb"] = str(cfg.get("quota", {}).get("limit_gb", limit_gb))
                 form["blocked_group"] = cfg.get("quota", {}).get("blocked_group", form["blocked_group"])
 
@@ -677,22 +1021,44 @@ def settings():
 @login_required
 def portal():
     cfg = Config().get()
-    csv_file = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    users, summary = portal_inventory(cfg)
 
-    users = []
+    return render_template(
+        "portal.html",
+        users=users,
+        summary=summary,
+        checked_at=local_timestamp()
+    )
 
-    if os.path.exists(csv_file):
-        with open(csv_file, newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                users.append(row)
 
-    return render_template("portal.html", users=users)
+@app.route("/diagnostics")
+@login_required
+def diagnostics():
+    cfg = Config().get()
+    checks = diagnostics_data(cfg)
+    ok_count = sum(1 for check in checks if check["ok"])
+    categories = sorted({check["category"] for check in checks})
+
+    return render_template(
+        "diagnostics.html",
+        checks=checks,
+        categories=categories,
+        summary={
+            "ok": ok_count,
+            "fail": len(checks) - ok_count,
+            "total": len(checks)
+        },
+        checked_at=local_timestamp()
+    )
 
 @app.route("/download/captive-passwords")
 @login_required
 def download_captive_passwords():
-    path = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    cfg = Config().get()
+    path = cfg.get("captive_portal", {}).get(
+        "csv_file",
+        "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    )
     return send_file(path, as_attachment=True)
 
 def gen_password(length=10):
@@ -731,7 +1097,10 @@ end
     if result.returncode != 0:
         return jsonify({"status": "error"}), 500
 
-    csv_file = "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    csv_file = cfg.get("captive_portal", {}).get(
+        "csv_file",
+        "/opt/fortigate-monitor/data/captive_passwords_today.csv"
+    )
     today = local_date()
 
     rows = []
@@ -754,7 +1123,52 @@ end
         writer.writeheader()
         writer.writerows(rows)
 
+    log_event(
+        cfg["general"]["database"],
+        "portal_password_reset",
+        f"Password actualizado para {username}",
+        severity="info",
+        actor=session.get("username", "admin"),
+        target=username
+    )
+
     return jsonify({"status": "ok", "username": username})
+
+
+@app.route("/api/portal/rotate-all", methods=["POST"])
+@login_required
+def rotate_all_portal_users():
+    cfg = Config().get()
+    script = "/opt/fortigate-monitor/scripts/daily_captive_reset.py"
+
+    result = subprocess.run(
+        [sys.executable, script],
+        capture_output=True,
+        text=True,
+        timeout=180
+    )
+
+    ok = result.returncode == 0
+    log_event(
+        cfg["general"]["database"],
+        "portal_password_rotation",
+        "Rotacion manual de usuarios del portal cautivo",
+        severity="info" if ok else "error",
+        actor=session.get("username", "admin"),
+        details={
+            "returncode": result.returncode,
+            "stdout": result.stdout[-1000:],
+            "stderr": result.stderr[-1000:]
+        }
+    )
+
+    if not ok:
+        return jsonify({
+            "status": "error",
+            "message": result.stderr or result.stdout or "No se pudo rotar passwords"
+        }), 500
+
+    return jsonify({"status": "ok", "message": "Passwords rotados correctamente"})
 
 
 if __name__ == "__main__":

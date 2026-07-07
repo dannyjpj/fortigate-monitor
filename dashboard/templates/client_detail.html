@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="ops-hero">
+    <div>
+        <span class="eyebrow">Fase 4</span>
+        <h1>Cliente {{ ip }}</h1>
+        <p>Detalle diario del consumo, sesiones y uso por servicio para investigar equipos antes o despues de aplicar una cuota.</p>
+    </div>
+    <div class="ops-status">
+        <span class="health-badge">Actualizado</span>
+        <strong>{{ checked_at }}</strong>
+        <a class="ghost-link" href="/clients">Volver a Clientes</a>
+    </div>
+</section>
+
+<div class="executive-grid clients-summary">
+    <div class="exec-card primary">
+        <span>Consumo total</span>
+        <strong>{{ detail.summary.used_label }}</strong>
+        <small>{{ detail.summary.percent }}% de {{ quota_config.limit_gb }} GB</small>
+    </div>
+    <div class="exec-card">
+        <span>Sesiones</span>
+        <strong>{{ detail.summary.sessions }}</strong>
+        <small>{{ detail.summary.first_seen or "-" }} a {{ detail.summary.last_seen or "-" }}</small>
+    </div>
+    <div class="exec-card">
+        <span>Descarga</span>
+        <strong>{{ detail.summary.received_label }}</strong>
+        <small>Bytes recibidos</small>
+    </div>
+    <div class="exec-card">
+        <span>Subida</span>
+        <strong>{{ detail.summary.sent_label }}</strong>
+        <small>Bytes enviados</small>
+    </div>
+</div>
+
+<section class="panel">
+    <div class="section-title">
+        <h2>Estado de cuota</h2>
+        <span>{{ detail.summary.network }}</span>
+    </div>
+    <div class="status-list">
+        <div class="status-row">
+            <div>
+                <strong>{{ detail.summary.srcname }}</strong>
+                <small>{{ detail.summary.srcip }}</small>
+            </div>
+            <span class="badge {{ 'danger' if detail.quota.status == 'BLOCKED' else 'ok' }}">{{ detail.quota.status }}</span>
+        </div>
+        <div class="status-row">
+            <div>
+                <strong>Objeto firewall</strong>
+                <small>{{ detail.quota.firewall_object or "Sin objeto asociado" }}</small>
+            </div>
+            <span class="badge {{ 'ok' if detail.quota.firewall_synced else '' }}">{{ "Sincronizado" if detail.quota.firewall_synced else "Pendiente" }}</span>
+        </div>
+        <div class="status-row">
+            <div class="quota-usage wide">
+                <strong>{{ detail.summary.used_label }}</strong>
+                <span>{{ detail.summary.percent }}%</span>
+                <div class="usage-bar {{ 'blocked' if detail.quota.status == 'BLOCKED' else 'normal' }}" style="--usage: {{ detail.summary.capped }}%;"></div>
+            </div>
+            {% if detail.quota.status == "BLOCKED" %}
+                <button onclick="releaseIP('{{ ip }}')">Liberar IP</button>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="two-column">
+    {% for title, rows in [("Servicios", detail.services), ("Destinos", detail.destinations), ("Politicas", detail.policies), ("Aplicaciones", detail.apps)] %}
+    <section class="panel table-panel">
+        <div class="section-title">
+            <h2>{{ title }}</h2>
+            <span>Top diario</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Sesiones</th>
+                    <th>Trafico</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td data-label="Nombre">{{ row.label }}</td>
+                    <td data-label="Sesiones">{{ row.sessions }}</td>
+                    <td data-label="Trafico">{{ row.bytes_label }}</td>
+                </tr>
+                {% endfor %}
+                {% if rows|length == 0 %}
+                <tr class="empty-row">
+                    <td colspan="3">Sin registros para este cliente.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </section>
+    {% endfor %}
+</div>
+
+<script>
+function releaseIP(ip){
+    if(!confirm("Desea liberar la IP " + ip + "?")){
+        return;
+    }
+
+    fetch("/api/quota/release/" + ip, { method: "POST" })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === "ok"){
+            location.reload();
+        }else{
+            alert("No se pudo liberar la IP");
+        }
+    })
+    .catch(() => alert("Error de comunicacion con el servidor."));
+}
+</script>
+
+{% endblock %}

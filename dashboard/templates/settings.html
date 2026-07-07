@@ -26,6 +26,39 @@
 <form class="settings-form" method="post">
     <section class="panel settings-panel">
         <div class="section-title">
+            <h2>FortiGate</h2>
+            <span>Identidad y acceso SSH para portabilidad</span>
+        </div>
+
+        <div class="form-grid">
+            <label>
+                <span>Nombre del firewall</span>
+                <input type="text" name="firewall_name" value="{{ form.firewall_name }}" required>
+            </label>
+
+            <label>
+                <span>Host/IP del FortiGate</span>
+                <input type="text" name="firewall_host" value="{{ form.firewall_host }}" required>
+            </label>
+
+            <label>
+                <span>Usuario SSH</span>
+                <input type="text" name="ssh_user" value="{{ form.ssh_user }}" required>
+            </label>
+
+            <label>
+                <span>Puerto SSH</span>
+                <input type="number" name="ssh_port" min="1" max="65535" value="{{ form.ssh_port }}" required>
+            </label>
+        </div>
+
+        <div class="settings-hint">
+            El API token no se muestra ni se edita desde UI para evitar exposicion accidental.
+        </div>
+    </section>
+
+    <section class="panel settings-panel">
+        <div class="section-title">
             <h2>Cuota de navegacion</h2>
             <span>Aplica al job que bloquea usuarios cada minuto</span>
         </div>
@@ -56,6 +89,25 @@
 
         <div class="settings-hint">
             Ejemplo: Gestion, 10.0.100.0/24
+        </div>
+    </section>
+
+    <section class="panel settings-panel">
+        <div class="section-title">
+            <h2>Operacion local</h2>
+            <span>Portal cautivo y formato horario</span>
+        </div>
+
+        <div class="form-grid">
+            <label>
+                <span>Zona horaria</span>
+                <input type="text" name="timezone" value="{{ form.timezone }}" required>
+            </label>
+
+            <label>
+                <span>Longitud de password portal</span>
+                <input type="number" name="password_length" min="8" max="32" value="{{ form.password_length }}" required>
+            </label>
         </div>
     </section>
 

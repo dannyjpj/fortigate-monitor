@@ -2,33 +2,110 @@
 
 {% block content %}
 
-<div class="page-header">
+<section class="ops-hero">
     <div>
-        <span class="eyebrow">Control de consumo</span>
-        <h1>Gestion de Cuotas</h1>
+        <span class="eyebrow">Fase 5</span>
+        <h1>Centro de Cuotas</h1>
+        <p>Vista operativa para revisar equipos sobre limite, bloqueos activos y liberaciones manuales sincronizadas con FortiGate.</p>
     </div>
-    <a class="ghost-link" href="/">Volver al Dashboard</a>
+    <div class="ops-status">
+        <span class="health-badge">Actualizado</span>
+        <strong>{{ checked_at }}</strong>
+        <small>{{ summary.group }}</small>
+    </div>
+</section>
+
+<div class="executive-grid clients-summary">
+    <div class="exec-card primary">
+        <span>Limite activo</span>
+        <strong>{{ summary.limit_gb }} GB</strong>
+        <small>Por IP y por dia</small>
+    </div>
+    <div class="exec-card">
+        <span>Sobre limite</span>
+        <strong>{{ summary.over_limit }}</strong>
+        <small>Consumo detectado hoy</small>
+    </div>
+    <div class="exec-card">
+        <span>Bloqueados</span>
+        <strong>{{ summary.blocked }}</strong>
+        <small>Objetos activos en FortiGate</small>
+    </div>
+    <div class="exec-card">
+        <span>Liberados</span>
+        <strong>{{ summary.released }}</strong>
+        <small>Accion manual del dia</small>
+    </div>
 </div>
 
-<section class="panel">
-    <div class="section-title">
-        <h2>IPs bloqueadas</h2>
-        <span>Dispositivos que superaron el limite configurado</span>
-    </div>
+<div class="two-column">
+    <section class="panel table-panel">
+        <div class="section-title">
+            <h2>Equipos sobre limite</h2>
+            <span>Incluye pendientes de bloqueo</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Nombre</th>
+                    <th>Red</th>
+                    <th>Consumo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in over_limit %}
+                <tr>
+                    <td data-label="IP"><a class="table-link" href="/clients/{{ item.srcip }}">{{ item.srcip }}</a></td>
+                    <td data-label="Nombre">{{ item.srcname }}</td>
+                    <td data-label="Red"><span class="badge ok">{{ item.network }}</span></td>
+                    <td data-label="Consumo">{{ item.used_label }}</td>
+                </tr>
+                {% endfor %}
+                {% if over_limit|length == 0 %}
+                <tr class="empty-row">
+                    <td colspan="4">No hay equipos sobre el limite configurado.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </section>
 
-    <div class="quota-summary">
-        <div>
-            <span>Bloqueos activos</span>
-            <strong>{{ quotas|length }}</strong>
+    <section class="panel">
+        <div class="section-title">
+            <h2>Politica aplicada</h2>
+            <span>Configuracion actual</span>
         </div>
-        <div>
-            <span>Politica</span>
-            <strong>2GB</strong>
+        <div class="status-list">
+            <div class="status-row">
+                <div>
+                    <strong>{{ summary.group }}</strong>
+                    <small>Address Group de bloqueo</small>
+                </div>
+                <span class="badge ok">FortiGate</span>
+            </div>
+            <div class="status-row">
+                <div>
+                    <strong>{{ summary.limit_gb }} GB</strong>
+                    <small>Cuota maxima diaria por IP</small>
+                </div>
+                <a class="ghost-link" href="/settings">Editar</a>
+            </div>
+            <div class="status-row">
+                <div>
+                    <strong>Reset diario</strong>
+                    <small>El timer limpia trafico y objetos BLOCK_*</small>
+                </div>
+                <a class="ghost-link" href="/health">Ver health</a>
+            </div>
         </div>
-        <div>
-            <span>Accion disponible</span>
-            <strong>Liberar IP</strong>
-        </div>
+    </section>
+</div>
+
+<section class="panel table-panel">
+    <div class="section-title">
+        <h2>Historial de cuota del dia</h2>
+        <span>Bloqueos y liberaciones</span>
     </div>
 
     <table>
@@ -53,12 +130,12 @@
             {% set capped = 100 if percent > 100 else percent %}
             <tr>
                 <td data-label="Fecha">{{ q["date"] }}</td>
-                <td data-label="IP">{{ q["srcip"] }}</td>
+                <td data-label="IP"><a class="table-link" href="/clients/{{ q['srcip'] }}">{{ q["srcip"] }}</a></td>
                 <td data-label="Consumo">
                     <div class="quota-usage">
                         <strong>{{ q["used_gb"] }} GB</strong>
                         <span>{{ "%.0f"|format(percent) }}%</span>
-                        <div class="usage-bar" style="--usage: {{ capped }}%;"></div>
+                        <div class="usage-bar {{ 'released' if q['status'] == 'RELEASED' else '' }}" style="--usage: {{ capped }}%;"></div>
                     </div>
                 </td>
                 <td data-label="Limite">{{ q["limit_gb"] }} GB</td>
@@ -90,7 +167,7 @@
         {% endfor %}
         {% if quotas|length == 0 %}
             <tr class="empty-row">
-                <td colspan="8">Sin IPs bloqueadas por cuota en este momento.</td>
+                <td colspan="8">Sin eventos de cuota para el dia actual.</td>
             </tr>
         {% endif %}
         </tbody>
@@ -103,9 +180,7 @@ function releaseIP(ip){
         return;
     }
 
-    fetch("/api/quota/release/" + ip, {
-        method: "POST"
-    })
+    fetch("/api/quota/release/" + ip, { method: "POST" })
     .then(response => response.json())
     .then(data => {
         if(data.status === "ok"){
@@ -113,13 +188,9 @@ function releaseIP(ip){
             location.reload();
         }else{
             alert("Ocurrio un error");
-            console.log(data);
         }
     })
-    .catch(err=>{
-        console.error(err);
-        alert("Error de comunicacion con el servidor.");
-    });
+    .catch(() => alert("Error de comunicacion con el servidor."));
 }
 </script>
 

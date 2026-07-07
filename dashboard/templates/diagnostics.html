@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="ops-hero health-hero">
+    <div>
+        <span class="eyebrow">Fase 8</span>
+        <h1>Diagnostico</h1>
+        <p>Checklist de portabilidad para validar configuracion, servicios, base de datos y conectividad con FortiGate.</p>
+    </div>
+    <div class="ops-status">
+        {% if summary.fail == 0 %}
+            <span class="health-badge">Listo para operar</span>
+        {% else %}
+            <span class="badge danger">Requiere revision</span>
+        {% endif %}
+        <strong>{{ checked_at }}</strong>
+        <small>{{ summary.ok }}/{{ summary.total }} checks OK</small>
+    </div>
+</section>
+
+<div class="executive-grid clients-summary">
+    <div class="exec-card primary">
+        <span>Checks totales</span>
+        <strong>{{ summary.total }}</strong>
+        <small>Validaciones ejecutadas</small>
+    </div>
+    <div class="exec-card">
+        <span>Correctos</span>
+        <strong>{{ summary.ok }}</strong>
+        <small>Listos para produccion</small>
+    </div>
+    <div class="exec-card">
+        <span>Alertas</span>
+        <strong>{{ summary.fail }}</strong>
+        <small>Revisar antes de migrar</small>
+    </div>
+    <div class="exec-card">
+        <span>Categorias</span>
+        <strong>{{ categories|length }}</strong>
+        <small>Archivos, servicios y FortiGate</small>
+    </div>
+</div>
+
+{% for category in categories %}
+<section class="panel">
+    <div class="section-title">
+        <h2>{{ category }}</h2>
+        <span>Estado de componentes</span>
+    </div>
+    <div class="status-list">
+        {% for check in checks if check.category == category %}
+        <div class="status-row">
+            <div>
+                <strong>{{ check.name }}</strong>
+                <small>{{ check.detail }}</small>
+            </div>
+            <span class="badge {{ 'ok' if check.ok else 'danger' }}">{{ "OK" if check.ok else "Revisar" }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+
+{% endblock %}

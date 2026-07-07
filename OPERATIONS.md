@@ -28,6 +28,30 @@ El servidor ejecuta:
 /opt/fortigate-monitor/venv/bin/python3 /opt/fortigate-monitor/scripts/quota_check.py
 ```
 
+## Consola web
+
+- `/health`: estado del appliance, servicios, FortiGate, DB y cuotas.
+- `/diagnostics`: checklist de portabilidad para nuevos servidores o nuevos FortiGate.
+- `/clients`: inventario diario de equipos.
+- `/clients/<ip>`: detalle por equipo, servicios, destinos, politicas y aplicaciones.
+- `/quotas`: centro operativo de cuotas, bloqueos y liberaciones.
+- `/portal`: credenciales del portal cautivo y rotacion manual.
+- `/settings`: configuracion editable con backup automatico de YAML.
+
+## Exportaciones
+
+Reporte diario de consumo por IP:
+
+```text
+/download/traffic-report.csv
+```
+
+Credenciales del portal cautivo:
+
+```text
+/download/captive-passwords
+```
+
 ## Reset diario manual
 
 Este comando libera bloqueos del FortiGate y limpia los contadores diarios. Usarlo solo cuando se quiera reiniciar el ciclo de consumo:
@@ -53,3 +77,5 @@ quota:
 ```
 
 El grupo debe existir en FortiGate y estar asociado a una politica que deniegue Internet.
+
+Los cambios desde `/settings` generan un backup automatico en `/opt/fortigate-monitor/backups/` antes de reemplazar `config.yaml`.

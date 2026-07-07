@@ -12,6 +12,7 @@
         <span class="health-badge">Actualizado</span>
         <strong>{{ checked_at }}</strong>
         <small>Limite {{ quota.limit_gb }} GB</small>
+        <a class="ghost-link" href="/download/traffic-report.csv">Exportar CSV</a>
     </div>
 </section>
 
@@ -64,7 +65,7 @@
                         <span></span>{{ client.status_label }}
                     </span>
                 </td>
-                <td data-label="IP"><strong>{{ client.srcip }}</strong></td>
+                <td data-label="IP"><a class="table-link" href="/clients/{{ client.srcip }}"><strong>{{ client.srcip }}</strong></a></td>
                 <td data-label="Nombre">{{ client.srcname }}</td>
                 <td data-label="Red"><span class="badge ok">{{ client.network }}</span></td>
                 <td data-label="Consumo">

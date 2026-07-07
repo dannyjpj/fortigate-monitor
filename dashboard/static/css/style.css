@@ -625,10 +625,27 @@ input:focus{
     color:#fff;
 }
 
+.table-link{
+    color:#d9f99d;
+    font-weight:800;
+    text-decoration:none;
+}
+
+.table-link:hover{
+    text-decoration:underline;
+}
+
 .actions{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
+}
+
+.action-strip{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:18px;
 }
 
 .quota-summary{
@@ -671,6 +688,10 @@ input:focus{
     min-width:150px;
 }
 
+.quota-usage.wide{
+    width:min(520px,100%);
+}
+
 .quota-usage strong{
     color:#fff;
 }
@@ -708,6 +729,10 @@ input:focus{
 
 .usage-bar.released:before{
     background:linear-gradient(90deg,#38bdf8,#06b6d4);
+}
+
+.usage-bar.blocked:before{
+    background:linear-gradient(90deg,#f97316,var(--danger));
 }
 
 .clients-summary{
@@ -981,6 +1006,24 @@ textarea:focus{
     font-size:13px;
 }
 
+.password-real{
+    display:inline-block;
+    margin-right:10px;
+    padding:5px 8px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#0b111c;
+    color:#fff;
+    font-family:Consolas,Monaco,monospace;
+}
+
+.password-mask{
+    display:inline-block;
+    margin-right:10px;
+    color:var(--muted);
+    font-family:Consolas,Monaco,monospace;
+}
+
 .form-actions{
     display:flex;
     gap:10px;
@@ -1183,6 +1226,7 @@ textarea:focus{
     }
 
     .actions,
+    .action-strip,
     .page-header{
         width:100%;
     }
@@ -1198,6 +1242,8 @@ textarea:focus{
     .ghost-link,
     .button-link,
     .actions a,
+    .action-strip a,
+    .action-strip button,
     .form-actions button,
     .form-actions a{
         flex:1;
