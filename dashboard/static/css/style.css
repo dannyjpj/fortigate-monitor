@@ -513,6 +513,13 @@ button:hover{
     filter:brightness(1.06);
 }
 
+.secondary-button{
+    border:1px solid rgba(132,204,22,.32);
+    background:rgba(132,204,22,.12);
+    color:#d9f99d;
+    box-shadow:none;
+}
+
 input{
     width:100%;
     padding:12px 13px;
@@ -677,6 +684,10 @@ input:focus{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
+}
+
+.inline-actions{
+    justify-content:flex-end;
 }
 
 .action-strip{

@@ -63,13 +63,38 @@ cur.execute(
 )
 
 cur.execute("""
-SELECT srcip,
-       SUM(sentbyte + rcvdbyte) AS used_bytes
-FROM traffic
-WHERE fecha = ?
-GROUP BY srcip
-HAVING used_bytes >= ?
-""", (today, LIMIT_BYTES))
+CREATE TABLE IF NOT EXISTS quota_offsets (
+    date TEXT NOT NULL,
+    srcip TEXT NOT NULL,
+    offset_bytes INTEGER NOT NULL DEFAULT 0,
+    reset_at TEXT,
+    reset_by TEXT,
+    PRIMARY KEY (date, srcip)
+)
+""")
+
+cur.execute("""
+WITH usage AS (
+    SELECT srcip,
+           SUM(sentbyte + rcvdbyte) AS total_bytes
+    FROM traffic
+    WHERE fecha = ?
+    GROUP BY srcip
+)
+SELECT usage.srcip,
+       CASE
+           WHEN usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+           ELSE usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0)
+       END AS used_bytes
+FROM usage
+LEFT JOIN quota_offsets
+    ON quota_offsets.date = ?
+   AND quota_offsets.srcip = usage.srcip
+WHERE CASE
+        WHEN usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+        ELSE usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0)
+      END >= ?
+""", (today, today, LIMIT_BYTES))
 
 rows = cur.fetchall()
 

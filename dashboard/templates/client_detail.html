@@ -16,7 +16,7 @@
 
 <div class="executive-grid clients-summary">
     <div class="exec-card primary">
-        <span>Consumo total</span>
+        <span>Consumo de cuota</span>
         <strong>{{ detail.summary.used_label }}</strong>
         <small>{{ detail.summary.percent }}% de {{ quota_config.limit_gb }} GB</small>
     </div>
@@ -26,14 +26,14 @@
         <small>{{ detail.summary.first_seen or "-" }} a {{ detail.summary.last_seen or "-" }}</small>
     </div>
     <div class="exec-card">
-        <span>Descarga</span>
-        <strong>{{ detail.summary.received_label }}</strong>
-        <small>Bytes recibidos</small>
+        <span>Total diario</span>
+        <strong>{{ detail.summary.total_label }}</strong>
+        <small>Antes de restablecimientos</small>
     </div>
     <div class="exec-card">
-        <span>Subida</span>
-        <strong>{{ detail.summary.sent_label }}</strong>
-        <small>Bytes enviados</small>
+        <span>Offset</span>
+        <strong>{{ detail.summary.offset_label }}</strong>
+        <small>{{ detail.summary.reset_at or "Sin restablecer" }}</small>
     </div>
 </div>
 
@@ -78,7 +78,12 @@
                 <div class="usage-bar {{ 'blocked' if detail.quota.status == 'BLOCKED' else 'normal' }}" style="--usage: {{ detail.summary.capped }}%;"></div>
             </div>
             {% if detail.quota.status == "BLOCKED" %}
-                <button onclick="releaseIP('{{ ip }}')">Liberar IP</button>
+                <div class="actions inline-actions">
+                    <button onclick="releaseIP('{{ ip }}')">Liberar IP</button>
+                    <button class="secondary-button" onclick="resetQuota('{{ ip }}')">Restablecer cuota</button>
+                </div>
+            {% else %}
+                <button class="secondary-button" onclick="resetQuota('{{ ip }}')">Restablecer cuota</button>
             {% endif %}
         </div>
     </div>
@@ -131,6 +136,23 @@ function releaseIP(ip){
             location.reload();
         }else{
             alert("No se pudo liberar la IP");
+        }
+    })
+    .catch(() => alert("Error de comunicacion con el servidor."));
+}
+
+function resetQuota(ip){
+    if(!confirm("Restablecer la cuota de " + ip + "? El consumo actual quedara como punto cero y tendra una cuota nueva.")){
+        return;
+    }
+
+    fetch("/api/quota/reset/" + ip, { method: "POST" })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(result => {
+        if(result.ok && result.data.status === "ok"){
+            location.reload();
+        }else{
+            alert("No se pudo restablecer la cuota");
         }
     })
     .catch(() => alert("Error de comunicacion con el servidor."));

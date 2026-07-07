@@ -31,9 +31,9 @@
         <small>Objetos activos en FortiGate</small>
     </div>
     <div class="exec-card">
-        <span>Liberados</span>
-        <strong>{{ summary.released }}</strong>
-        <small>Accion manual del dia</small>
+        <span>Restablecidos</span>
+        <strong>{{ summary.reset }}</strong>
+        <small>Cuota reiniciada hoy</small>
     </div>
 </div>
 
@@ -161,7 +161,12 @@
                 <td data-label="Bloqueado">{{ q["blocked_at"] or "-" }}</td>
                 <td data-label="Accion">
                     {% if q["status"] == "BLOCKED" %}
-                        <button onclick="releaseIP('{{ q['srcip'] }}')">Liberar</button>
+                        <div class="actions inline-actions">
+                            <button onclick="releaseIP('{{ q['srcip'] }}')">Liberar</button>
+                            <button class="secondary-button" onclick="resetQuota('{{ q['srcip'] }}')">Restablecer</button>
+                        </div>
+                    {% elif q["status"] == "RESET" %}
+                        <span class="badge ok">Cuota nueva</span>
                     {% else %}
                         -
                     {% endif %}
@@ -191,6 +196,24 @@ function releaseIP(ip){
             location.reload();
         }else{
             alert("Ocurrio un error");
+        }
+    })
+    .catch(() => alert("Error de comunicacion con el servidor."));
+}
+
+function resetQuota(ip){
+    if(!confirm("Restablecer la cuota de " + ip + "? El consumo actual quedara como punto cero y tendra una cuota nueva.")){
+        return;
+    }
+
+    fetch("/api/quota/reset/" + ip, { method: "POST" })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(result => {
+        if(result.ok && result.data.status === "ok"){
+            alert("Cuota restablecida correctamente");
+            location.reload();
+        }else{
+            alert("No se pudo restablecer la cuota");
         }
     })
     .catch(() => alert("Error de comunicacion con el servidor."));

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.4 - Restablecimiento manual de cuota
+
+- Agrega boton `Restablecer cuota` junto a `Liberar`.
+- Implementa `quota_offsets` para reiniciar el contador de una IP sin borrar el trafico diario.
+- El consumo previo pasa a ser el punto cero y la IP recibe una cuota completa nueva.
+- El bloqueo automatico vuelve a aplicar cuando la IP consume nuevamente el limite configurado.
+- El reset diario limpia tambien `quota_offsets`.
+- El CSV agrega total diario y offset de cuota.
+
 ## 1.14.3 - Limpieza visual y tablas responsive
 
 - Quita etiquetas visibles `Fase X` de las categorias del dashboard.

@@ -227,19 +227,37 @@ def quota_health(cfg, db_path):
     try:
         conn = sqlite3.connect(db_path, timeout=10)
         conn.execute("PRAGMA busy_timeout = 10000")
+        ensure_quota_offsets(conn)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         limit_bytes = float(info["limit_gb"]) * 1024 * 1024 * 1024
         cur.execute("""
-            SELECT srcip,
-                   ROUND(SUM(sentbyte + rcvdbyte) / 1024.0 / 1024.0 / 1024.0, 2) AS used_gb
-            FROM traffic
-            WHERE fecha = ?
-            GROUP BY srcip
-            HAVING SUM(sentbyte + rcvdbyte) >= ?
+            WITH usage AS (
+                SELECT srcip,
+                       SUM(sentbyte + rcvdbyte) AS total_bytes
+                FROM traffic
+                WHERE fecha = ?
+                GROUP BY srcip
+            )
+            SELECT usage.srcip,
+                   ROUND(
+                       CASE
+                           WHEN usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+                           ELSE usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0)
+                       END / 1024.0 / 1024.0 / 1024.0,
+                       2
+                   ) AS used_gb
+            FROM usage
+            LEFT JOIN quota_offsets
+                ON quota_offsets.date = ?
+               AND quota_offsets.srcip = usage.srcip
+            WHERE CASE
+                    WHEN usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+                    ELSE usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0)
+                  END >= ?
             ORDER BY used_gb DESC
             LIMIT 5
-        """, (local_date(), limit_bytes))
+        """, (local_date(), local_date(), limit_bytes))
         info["over_limit"] = [dict(row) for row in cur.fetchall()]
         conn.close()
     except Exception as exc:
@@ -281,6 +299,23 @@ def ensure_traffic_mac_columns(conn):
     conn.commit()
 
 
+def ensure_quota_offsets(conn):
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS quota_offsets (
+        date TEXT NOT NULL,
+        srcip TEXT NOT NULL,
+        offset_bytes INTEGER NOT NULL DEFAULT 0,
+        reset_at TEXT,
+        reset_by TEXT,
+        PRIMARY KEY (date, srcip)
+    )
+    """)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_quota_offsets_date ON quota_offsets(date)"
+    )
+    conn.commit()
+
+
 def clients_inventory(cfg):
     db_path = cfg["general"]["database"]
     quota_cfg = cfg.get("quota", {})
@@ -291,6 +326,7 @@ def clients_inventory(cfg):
     conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("PRAGMA busy_timeout = 10000")
     ensure_traffic_mac_columns(conn)
+    ensure_quota_offsets(conn)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -311,16 +347,26 @@ def clients_inventory(cfg):
         )
         SELECT
             usage.*,
+            COALESCE(quota_offsets.offset_bytes, 0) AS offset_bytes,
+            CASE
+                WHEN usage.bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+                ELSE usage.bytes - COALESCE(quota_offsets.offset_bytes, 0)
+            END AS quota_bytes,
+            quota_offsets.reset_at,
+            quota_offsets.reset_by,
             quota_status.status AS quota_status,
             quota_status.firewall_synced,
             quota_status.blocked_at,
             quota_status.firewall_object
         FROM usage
+        LEFT JOIN quota_offsets
+            ON quota_offsets.date = ?
+           AND quota_offsets.srcip = usage.srcip
         LEFT JOIN quota_status
             ON quota_status.date = ?
            AND quota_status.srcip = usage.srcip
-        ORDER BY usage.bytes DESC
-    """, (today, today))
+        ORDER BY quota_bytes DESC
+    """, (today, today, today))
 
     rows = []
     summary = {
@@ -333,7 +379,8 @@ def clients_inventory(cfg):
 
     for row in cur.fetchall():
         item = dict(row)
-        used_bytes = item.get("bytes") or 0
+        total_bytes = item.get("bytes") or 0
+        used_bytes = item.get("quota_bytes") or 0
         used_gb = round(used_bytes / 1024 / 1024 / 1024, 2)
         percent = round((used_bytes / limit_bytes) * 100, 1) if limit_bytes else 0
         capped = min(percent, 100)
@@ -346,6 +393,9 @@ def clients_inventory(cfg):
         elif raw_status == "RELEASED":
             status = "released"
             status_label = "Liberado"
+        elif raw_status == "RESET":
+            status = "normal"
+            status_label = "Restablecido"
         elif percent >= 80:
             status = "warning"
             status_label = "Cerca del limite"
@@ -359,6 +409,8 @@ def clients_inventory(cfg):
         item.update({
             "used_gb": used_gb,
             "used_label": format_bytes(used_bytes),
+            "total_label": format_bytes(total_bytes),
+            "offset_label": format_bytes(item.get("offset_bytes") or 0),
             "percent": percent,
             "capped": capped,
             "status": status,
@@ -381,6 +433,7 @@ def client_detail_data(cfg, ip):
     conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("PRAGMA busy_timeout = 10000")
     ensure_traffic_mac_columns(conn)
+    ensure_quota_offsets(conn)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -401,11 +454,30 @@ def client_detail_data(cfg, ip):
     """, (ip, monitored_network_for_ip(cfg, ip), today, ip))
     summary = dict(cur.fetchone())
     summary["srcip"] = ip
-    summary["bytes"] = summary.get("bytes") or 0
+    total_bytes = summary.get("bytes") or 0
+    cur.execute("""
+        SELECT offset_bytes, reset_at, reset_by
+        FROM quota_offsets
+        WHERE date = ? AND srcip = ?
+        LIMIT 1
+    """, (today, ip))
+    offset_row = cur.fetchone()
+    offset = dict(offset_row) if offset_row else {
+        "offset_bytes": 0,
+        "reset_at": None,
+        "reset_by": None
+    }
+    summary["total_bytes"] = total_bytes
+    summary["offset_bytes"] = offset.get("offset_bytes") or 0
+    summary["bytes"] = max(total_bytes - summary["offset_bytes"], 0)
     summary["sentbyte"] = summary.get("sentbyte") or 0
     summary["rcvdbyte"] = summary.get("rcvdbyte") or 0
     summary["sessions"] = summary.get("sessions") or 0
     summary["used_label"] = format_bytes(summary["bytes"])
+    summary["total_label"] = format_bytes(total_bytes)
+    summary["offset_label"] = format_bytes(summary["offset_bytes"])
+    summary["reset_at"] = offset.get("reset_at")
+    summary["reset_by"] = offset.get("reset_by")
     summary["sent_label"] = format_bytes(summary["sentbyte"])
     summary["received_label"] = format_bytes(summary["rcvdbyte"])
     summary["percent"] = round((summary["bytes"] / limit_bytes) * 100, 1) if limit_bytes else 0
@@ -471,6 +543,7 @@ def quota_center_data(cfg):
     conn = sqlite3.connect(db_path, timeout=30)
     conn.execute("PRAGMA busy_timeout = 30000")
     ensure_traffic_mac_columns(conn)
+    ensure_quota_offsets(conn)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -486,24 +559,40 @@ def quota_center_data(cfg):
     rows = [dict(row) for row in cur.fetchall()]
 
     cur.execute("""
-        SELECT srcip,
-               COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
-               COALESCE(MAX(NULLIF(auth_user,'')), '-') AS auth_user,
-               COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
-               COALESCE(MAX(NULLIF(network,'')), '-') AS network,
-               SUM(sentbyte + rcvdbyte) AS bytes,
-               COUNT(*) AS sessions
-        FROM traffic
-        WHERE fecha = ?
-        GROUP BY srcip
-        HAVING SUM(sentbyte + rcvdbyte) >= ?
+        WITH usage AS (
+            SELECT srcip,
+                   COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
+                   COALESCE(MAX(NULLIF(auth_user,'')), '-') AS auth_user,
+                   COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
+                   COALESCE(MAX(NULLIF(network,'')), '-') AS network,
+                   SUM(sentbyte + rcvdbyte) AS total_bytes,
+                   COUNT(*) AS sessions
+            FROM traffic
+            WHERE fecha = ?
+            GROUP BY srcip
+        )
+        SELECT usage.*,
+               COALESCE(quota_offsets.offset_bytes, 0) AS offset_bytes,
+               CASE
+                   WHEN usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+                   ELSE usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0)
+               END AS bytes
+        FROM usage
+        LEFT JOIN quota_offsets
+            ON quota_offsets.date = ?
+           AND quota_offsets.srcip = usage.srcip
+        WHERE CASE
+                WHEN usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0) < 0 THEN 0
+                ELSE usage.total_bytes - COALESCE(quota_offsets.offset_bytes, 0)
+              END >= ?
         ORDER BY bytes DESC
-    """, (today, limit_bytes))
+    """, (today, today, limit_bytes))
     over_limit = []
     for row in cur.fetchall():
         item = dict(row)
         item["used_gb"] = round((item["bytes"] or 0) / 1024 / 1024 / 1024, 2)
         item["used_label"] = format_bytes(item["bytes"] or 0)
+        item["total_label"] = format_bytes(item["total_bytes"] or 0)
         over_limit.append(item)
 
     conn.close()
@@ -514,6 +603,7 @@ def quota_center_data(cfg):
         "summary": {
             "blocked": sum(1 for row in rows if row["status"] == "BLOCKED"),
             "released": sum(1 for row in rows if row["status"] == "RELEASED"),
+            "reset": sum(1 for row in rows if row["status"] == "RESET"),
             "over_limit": len(over_limit),
             "limit_gb": limit_gb,
             "group": cfg.get("quota", {}).get("blocked_group", "-")
@@ -801,6 +891,8 @@ def download_traffic_report():
         "network",
         "used_gb",
         "used_label",
+        "total_daily",
+        "quota_offset",
         "quota_percent",
         "status",
         "sessions",
@@ -817,6 +909,8 @@ def download_traffic_report():
             row.get("network"),
             row.get("used_gb"),
             row.get("used_label"),
+            row.get("total_label"),
+            row.get("offset_label"),
             row.get("percent"),
             row.get("status_label"),
             row.get("sessions"),
@@ -881,6 +975,106 @@ def release_quota(ip):
     )
 
     return jsonify({"status": "ok", "ip": ip})
+
+
+@app.route("/api/quota/reset/<ip>", methods=["POST"])
+@login_required
+def reset_quota(ip):
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return jsonify({"status": "error", "message": "IP invalida"}), 400
+
+    cfg = Config().get()
+    db = cfg["general"]["database"]
+    group = cfg.get("quota", {}).get("blocked_group", "BLOQUEADOS_2GB")
+    limit_gb = float(cfg.get("quota", {}).get("limit_gb", 2))
+    today = local_date()
+    obj = f"BLOCK_{ip}"
+
+    fg = FortiGateManager(cfg["fortigate"])
+    s1, b1 = fg.remove_from_group(group, obj)
+    s2, b2 = fg.delete_address(obj)
+
+    if s1 not in (200, 404) or s2 not in (200, 404):
+        return jsonify({
+            "status": "error",
+            "remove_group": [s1, b1],
+            "delete_address": [s2, b2]
+        }), 500
+
+    conn = sqlite3.connect(db, timeout=30)
+    conn.execute("PRAGMA busy_timeout = 30000")
+    ensure_quota_offsets(conn)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT COALESCE(SUM(sentbyte + rcvdbyte), 0)
+        FROM traffic
+        WHERE fecha = ? AND srcip = ?
+    """, (today, ip))
+    total_bytes = cur.fetchone()[0] or 0
+
+    cur.execute("""
+        INSERT INTO quota_offsets (date, srcip, offset_bytes, reset_at, reset_by)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(date, srcip) DO UPDATE SET
+            offset_bytes = excluded.offset_bytes,
+            reset_at = excluded.reset_at,
+            reset_by = excluded.reset_by
+    """, (
+        today,
+        ip,
+        total_bytes,
+        local_timestamp(),
+        session.get("username", "admin")
+    ))
+
+    cur.execute("""
+        INSERT INTO quota_status (
+            date, srcip, used_bytes, used_gb, limit_gb, status,
+            blocked_at, firewall_object, firewall_synced
+        )
+        VALUES (?, ?, 0, 0, ?, 'RESET', NULL, NULL, 0)
+        ON CONFLICT(date, srcip) DO UPDATE SET
+            used_bytes = 0,
+            used_gb = 0,
+            limit_gb = excluded.limit_gb,
+            status = 'RESET',
+            blocked_at = NULL,
+            firewall_object = NULL,
+            firewall_synced = 0
+    """, (today, ip, limit_gb))
+
+    conn.commit()
+    conn.close()
+
+    try:
+        log_event(
+            db,
+            "quota_reset",
+            f"Cuota restablecida para {ip}",
+            severity="info",
+            actor=session.get("username", "admin"),
+            target=ip,
+            details={
+                "offset_bytes": total_bytes,
+                "offset_label": format_bytes(total_bytes),
+                "new_quota_gb": limit_gb,
+                "group": group,
+                "remove_group_status": s1,
+                "delete_address_status": s2
+            }
+        )
+    except sqlite3.OperationalError as exc:
+        app.logger.warning("No se pudo auditar reset de cuota para %s: %s", ip, exc)
+
+    return jsonify({
+        "status": "ok",
+        "ip": ip,
+        "offset_bytes": total_bytes,
+        "new_quota_gb": limit_gb
+    })
 
 
 @app.route("/settings", methods=["GET", "POST"])

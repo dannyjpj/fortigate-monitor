@@ -79,6 +79,21 @@ class Database:
             "CREATE INDEX IF NOT EXISTS idx_quota_status ON quota_status(status)"
         )
 
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS quota_offsets (
+            date TEXT NOT NULL,
+            srcip TEXT NOT NULL,
+            offset_bytes INTEGER NOT NULL DEFAULT 0,
+            reset_at TEXT,
+            reset_by TEXT,
+            PRIMARY KEY (date, srcip)
+        )
+        """)
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_quota_offsets_date ON quota_offsets(date)"
+        )
+
         ensure_audit_table(self.conn)
 
         self.conn.commit()

@@ -31,6 +31,16 @@ def ensure_schema(cursor):
         PRIMARY KEY (date, srcip)
     )
     """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS quota_offsets (
+        date TEXT NOT NULL,
+        srcip TEXT NOT NULL,
+        offset_bytes INTEGER NOT NULL DEFAULT 0,
+        reset_at TEXT,
+        reset_by TEXT,
+        PRIMARY KEY (date, srcip)
+    )
+    """)
 
 
 def main():
@@ -73,6 +83,7 @@ def main():
 
     cur.execute("DELETE FROM traffic")
     cur.execute("DELETE FROM quota_status")
+    cur.execute("DELETE FROM quota_offsets")
     conn.commit()
     conn.close()
 

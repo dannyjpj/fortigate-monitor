@@ -1,5 +1,17 @@
 # Release Notes
 
+## FortiGate Monitor v1.14.4
+
+Parche operativo para entregar una nueva cuota diaria a una IP especifica sin borrar historicos del dia.
+
+### Incluye
+
+- Boton `Restablecer cuota` en Centro de Cuotas y Detalle de Cliente.
+- Tabla `quota_offsets` para tomar el consumo actual como punto cero.
+- Recalculo de cuota en dashboard, health, clientes y quota manager usando consumo efectivo.
+- Limpieza de offsets en el reset diario.
+- CSV con `total_daily` y `quota_offset`.
+
 ## FortiGate Monitor v1.14.3
 
 Parche visual para mejorar comportamiento responsive y limpiar etiquetas internas.
