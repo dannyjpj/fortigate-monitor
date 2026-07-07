@@ -53,6 +53,13 @@
         </div>
         <div class="status-row">
             <div>
+                <strong>Direccion MAC</strong>
+                <small class="mono-value">{{ detail.summary.srcmac or "-" }}</small>
+            </div>
+            <span class="badge ok">Inventario</span>
+        </div>
+        <div class="status-row">
+            <div>
                 <strong>Objeto firewall</strong>
                 <small>{{ detail.quota.firewall_object or "Sin objeto asociado" }}</small>
             </div>

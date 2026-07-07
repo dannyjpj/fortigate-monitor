@@ -5,6 +5,7 @@
 <tr>
 
 <th>IP</th>
+<th>MAC</th>
 <th>Nombre</th>
 <th>Red</th>
 <th>Bytes</th>
@@ -20,6 +21,7 @@
 <tr>
 
 <td data-label="IP">{{ row.srcip }}</td>
+<td data-label="MAC"><span class="mono-value">{{ row.srcmac or "-" }}</span></td>
 <td data-label="Nombre">{{ row.srcname }}</td>
 <td data-label="Red">{{ row.network }}</td>
 <td data-label="Bytes">{{ row.bytes | bytes }}</td>

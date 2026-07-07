@@ -50,6 +50,7 @@
             <tr>
                 <th>Estado</th>
                 <th>IP</th>
+                <th>MAC</th>
                 <th>Nombre</th>
                 <th>Red</th>
                 <th>Consumo</th>
@@ -66,6 +67,7 @@
                     </span>
                 </td>
                 <td data-label="IP"><a class="table-link" href="/clients/{{ client.srcip }}"><strong>{{ client.srcip }}</strong></a></td>
+                <td data-label="MAC"><span class="mono-value">{{ client.srcmac or "-" }}</span></td>
                 <td data-label="Nombre">{{ client.srcname }}</td>
                 <td data-label="Red"><span class="badge ok">{{ client.network }}</span></td>
                 <td data-label="Consumo">
@@ -81,7 +83,7 @@
             {% endfor %}
             {% if clients|length == 0 %}
             <tr class="empty-row">
-                <td colspan="7">No hay clientes detectados para el dia actual.</td>
+                <td colspan="8">No hay clientes detectados para el dia actual.</td>
             </tr>
             {% endif %}
         </tbody>

@@ -635,6 +635,12 @@ input:focus{
     text-decoration:underline;
 }
 
+.mono-value{
+    font-family:Consolas,Monaco,monospace;
+    color:#d9e2ee;
+    font-size:13px;
+}
+
 .actions{
     display:flex;
     gap:10px;

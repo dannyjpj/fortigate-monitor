@@ -64,3 +64,11 @@ Este documento resume la evolucion funcional del proyecto por fases. La premisa 
 - Version `1.14.0`.
 - Documentacion de fases, release notes, changelog y operacion diaria actualizada.
 - UI consolidada en estilo controlador dark/green.
+
+## v1.14.1
+
+### Parche - Inventario MAC
+
+- Captura direcciones MAC desde campos FortiGate `srcmac`, `mastersrcmac` o `devicemac`.
+- Agrega migracion automatica de SQLite para `srcmac` y `dstmac`.
+- Muestra MAC en dashboard, clientes, detalle de cliente, centro de cuotas y CSV diario.

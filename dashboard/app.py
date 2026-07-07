@@ -265,6 +265,19 @@ def monitored_network_for_ip(cfg, ip):
     return "-"
 
 
+def ensure_traffic_mac_columns(conn):
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(traffic)")]
+
+    if "srcmac" not in columns:
+        conn.execute("ALTER TABLE traffic ADD COLUMN srcmac TEXT")
+
+    if "dstmac" not in columns:
+        conn.execute("ALTER TABLE traffic ADD COLUMN dstmac TEXT")
+
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_srcmac ON traffic(srcmac)")
+    conn.commit()
+
+
 def clients_inventory(cfg):
     db_path = cfg["general"]["database"]
     quota_cfg = cfg.get("quota", {})
@@ -274,6 +287,7 @@ def clients_inventory(cfg):
 
     conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("PRAGMA busy_timeout = 10000")
+    ensure_traffic_mac_columns(conn)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -281,6 +295,7 @@ def clients_inventory(cfg):
         WITH usage AS (
             SELECT
                 srcip,
+                COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
                 COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
                 COALESCE(MAX(NULLIF(network,'')), '-') AS network,
                 SUM(sentbyte + rcvdbyte) AS bytes,
@@ -361,12 +376,14 @@ def client_detail_data(cfg, ip):
 
     conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("PRAGMA busy_timeout = 10000")
+    ensure_traffic_mac_columns(conn)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
     cur.execute("""
         SELECT
             COALESCE(MAX(NULLIF(srcname,'')), ?) AS srcname,
+            COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
             COALESCE(MAX(NULLIF(network,'')), ?) AS network,
             SUM(sentbyte + rcvdbyte) AS bytes,
             SUM(sentbyte) AS sentbyte,
@@ -448,6 +465,7 @@ def quota_center_data(cfg):
 
     conn = sqlite3.connect(db_path, timeout=30)
     conn.execute("PRAGMA busy_timeout = 30000")
+    ensure_traffic_mac_columns(conn)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
@@ -464,6 +482,7 @@ def quota_center_data(cfg):
 
     cur.execute("""
         SELECT srcip,
+               COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
                COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
                COALESCE(MAX(NULLIF(network,'')), '-') AS network,
                SUM(sentbyte + rcvdbyte) AS bytes,
@@ -770,6 +789,7 @@ def download_traffic_report():
     writer.writerow([
         "fecha",
         "srcip",
+        "srcmac",
         "srcname",
         "network",
         "used_gb",
@@ -784,6 +804,7 @@ def download_traffic_report():
         writer.writerow([
             local_date(),
             row.get("srcip"),
+            row.get("srcmac"),
             row.get("srcname"),
             row.get("network"),
             row.get("used_gb"),

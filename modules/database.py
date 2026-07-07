@@ -24,8 +24,10 @@ class Database:
             hora TEXT,
             network TEXT,
             srcip TEXT,
+            srcmac TEXT,
             srcname TEXT,
             dstip TEXT,
+            dstmac TEXT,
             policyid INTEGER,
             policyname TEXT,
             service TEXT,
@@ -43,6 +45,13 @@ class Database:
 
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_srcip ON traffic(srcip)"
+        )
+
+        self.ensure_column(cursor, "traffic", "srcmac", "TEXT")
+        self.ensure_column(cursor, "traffic", "dstmac", "TEXT")
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_srcmac ON traffic(srcmac)"
         )
 
         cursor.execute(
@@ -72,6 +81,12 @@ class Database:
 
         self.conn.commit()
 
+    def ensure_column(self, cursor, table, column, definition):
+        columns = [row[1] for row in cursor.execute(f"PRAGMA table_info({table})")]
+
+        if column not in columns:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
     def insert(self, data):
         cursor = self.conn.cursor()
 
@@ -81,8 +96,10 @@ class Database:
             hora,
             network,
             srcip,
+            srcmac,
             srcname,
             dstip,
+            dstmac,
             policyid,
             policyname,
             service,
@@ -92,14 +109,16 @@ class Database:
             rcvdbyte,
             duration
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get("fecha"),
             data.get("hora"),
             data.get("network"),
             data.get("srcip"),
+            data.get("srcmac"),
             data.get("srcname"),
             data.get("dstip"),
+            data.get("dstmac"),
             data.get("policyid"),
             data.get("policyname"),
             data.get("service"),

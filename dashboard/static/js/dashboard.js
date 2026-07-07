@@ -28,8 +28,8 @@ async function actualizarDashboard() {
     actualizarTabla(
         "tabla_ips",
         data.dashboard.top_ips,
-        ["srcip","srcname","network","bytes"],
-        ["IP","Nombre","Red","Bytes"]
+        ["srcip","srcmac","srcname","network","bytes"],
+        ["IP","MAC","Nombre","Red","Bytes"]
     );
 
     actualizarTabla(

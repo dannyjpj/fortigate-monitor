@@ -9,6 +9,20 @@ class Reports:
         self.conn = sqlite3.connect(DB_FILE, timeout=30)
         self.conn.execute("PRAGMA busy_timeout = 30000")
         self.conn.row_factory = sqlite3.Row
+        self.ensure_schema()
+
+    def ensure_schema(self):
+        cursor = self.conn.cursor()
+        columns = [row[1] for row in cursor.execute("PRAGMA table_info(traffic)")]
+
+        if "srcmac" not in columns:
+            cursor.execute("ALTER TABLE traffic ADD COLUMN srcmac TEXT")
+
+        if "dstmac" not in columns:
+            cursor.execute("ALTER TABLE traffic ADD COLUMN dstmac TEXT")
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_srcmac ON traffic(srcmac)")
+        self.conn.commit()
 
     def top_ips(self, limit=10):
 
@@ -17,6 +31,7 @@ class Reports:
         cursor.execute("""
             SELECT
                 srcip,
+                COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
                 COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
                 COALESCE(MAX(NULLIF(network,'')), '-') AS network,
                 SUM(sentbyte + rcvdbyte) AS bytes

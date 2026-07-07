@@ -48,6 +48,7 @@
             <thead>
                 <tr>
                     <th>IP</th>
+                    <th>MAC</th>
                     <th>Nombre</th>
                     <th>Red</th>
                     <th>Consumo</th>
@@ -57,6 +58,7 @@
                 {% for item in over_limit %}
                 <tr>
                     <td data-label="IP"><a class="table-link" href="/clients/{{ item.srcip }}">{{ item.srcip }}</a></td>
+                    <td data-label="MAC"><span class="mono-value">{{ item.srcmac or "-" }}</span></td>
                     <td data-label="Nombre">{{ item.srcname }}</td>
                     <td data-label="Red"><span class="badge ok">{{ item.network }}</span></td>
                     <td data-label="Consumo">{{ item.used_label }}</td>
@@ -64,7 +66,7 @@
                 {% endfor %}
                 {% if over_limit|length == 0 %}
                 <tr class="empty-row">
-                    <td colspan="4">No hay equipos sobre el limite configurado.</td>
+                    <td colspan="5">No hay equipos sobre el limite configurado.</td>
                 </tr>
                 {% endif %}
             </tbody>

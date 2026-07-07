@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.1 - Inventario MAC
+
+- Captura `srcmac`, `mastersrcmac` o `devicemac` desde logs FortiGate cuando esten disponibles.
+- Agrega columnas `srcmac` y `dstmac` a SQLite con migracion automatica.
+- Muestra MAC en dashboard, clientes, detalle de cliente y centro de cuotas.
+- Incluye MAC en la exportacion CSV diaria de trafico.
+
 ## 1.14.0 - Fases 4 a 10
 
 - Agrega detalle por cliente en `/clients/<ip>`.
