@@ -1,5 +1,15 @@
 # Release Notes
 
+## FortiGate Monitor v1.14.3
+
+Parche visual para mejorar comportamiento responsive y limpiar etiquetas internas.
+
+### Incluye
+
+- Retiro de etiquetas `Fase X` en encabezados de categorias.
+- Scroll horizontal controlado para tablas anchas.
+- Modo tabla tipo tarjeta desde pantallas menores a 760px.
+
 ## FortiGate Monitor v1.14.2
 
 Parche operativo para reflejar correctamente bloqueos de cuota y visualizar usuarios autenticados.

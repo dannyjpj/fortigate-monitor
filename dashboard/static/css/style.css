@@ -566,6 +566,38 @@ input:focus{
     text-align:right;
 }
 
+.table-panel{
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+}
+
+.table-panel table{
+    min-width:920px;
+}
+
+.table-panel .clients-table{
+    min-width:1280px;
+}
+
+.table-panel::-webkit-scrollbar{
+    height:10px;
+}
+
+.table-panel::-webkit-scrollbar-track{
+    background:#0b111c;
+    border-radius:999px;
+}
+
+.table-panel::-webkit-scrollbar-thumb{
+    background:#263447;
+    border-radius:999px;
+}
+
+.table-panel::-webkit-scrollbar-thumb:hover{
+    background:#34506d;
+}
+
 .section-title{
     display:flex;
     align-items:center;
@@ -1213,7 +1245,7 @@ textarea:focus{
     }
 }
 
-@media (max-width:560px){
+@media (max-width:760px){
     h1{
         font-size:28px;
     }
@@ -1258,6 +1290,15 @@ textarea:focus{
 
     .panel{
         overflow:visible;
+    }
+
+    .table-panel{
+        overflow-x:visible;
+    }
+
+    .table-panel table,
+    .table-panel .clients-table{
+        min-width:0;
     }
 
     table,

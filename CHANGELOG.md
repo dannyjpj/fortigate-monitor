@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.3 - Limpieza visual y tablas responsive
+
+- Quita etiquetas visibles `Fase X` de las categorias del dashboard.
+- Agrega scroll horizontal controlado a tablas anchas en desktop/tablet.
+- Adelanta el modo tarjeta responsive de tablas para pantallas menores a 760px.
+- Evita cortes visuales en Clientes al mostrar IP, MAC, Usuario, Nombre y consumo.
+
 ## 1.14.2 - Usuario autenticado y cuota robusta
 
 - Captura usuario autenticado desde logs FortiGate (`user`, `srcuser`, `unauthuser`, `xauthuser`).
