@@ -28,6 +28,7 @@ def ensure_audit_table(conn):
 def log_event(db_path, event_type, message, severity="info", actor="system", target=None, details=None):
     conn = sqlite3.connect(db_path, timeout=30)
     conn.execute("PRAGMA busy_timeout = 30000")
+    conn.execute("PRAGMA journal_mode = WAL")
     ensure_audit_table(conn)
 
     payload = None

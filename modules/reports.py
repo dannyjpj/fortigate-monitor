@@ -21,6 +21,9 @@ class Reports:
         if "dstmac" not in columns:
             cursor.execute("ALTER TABLE traffic ADD COLUMN dstmac TEXT")
 
+        if "auth_user" not in columns:
+            cursor.execute("ALTER TABLE traffic ADD COLUMN auth_user TEXT")
+
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_srcmac ON traffic(srcmac)")
         self.conn.commit()
 
@@ -32,6 +35,7 @@ class Reports:
             SELECT
                 srcip,
                 COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
+                COALESCE(MAX(NULLIF(auth_user,'')), '-') AS auth_user,
                 COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
                 COALESCE(MAX(NULLIF(network,'')), '-') AS network,
                 SUM(sentbyte + rcvdbyte) AS bytes

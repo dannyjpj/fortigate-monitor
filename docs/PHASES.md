@@ -72,3 +72,12 @@ Este documento resume la evolucion funcional del proyecto por fases. La premisa 
 - Captura direcciones MAC desde campos FortiGate `srcmac`, `mastersrcmac` o `devicemac`.
 - Agrega migracion automatica de SQLite para `srcmac` y `dstmac`.
 - Muestra MAC en dashboard, clientes, detalle de cliente, centro de cuotas y CSV diario.
+
+## v1.14.2
+
+### Parche - Usuario autenticado y cuota robusta
+
+- Captura usuario autenticado desde campos FortiGate `user`, `srcuser`, `unauthuser` o `xauthuser`.
+- Agrega migracion automatica de SQLite para `auth_user`.
+- Muestra Usuario en dashboard, clientes, detalle de cliente, centro de cuotas y CSV diario.
+- Corrige el ciclo de cuota para persistir `quota_status` antes de auditar, evitando que un bloqueo aplicado no aparezca en la UI.

@@ -25,6 +25,7 @@ class FortigateParser:
             "hora": data.get("time"),
             "srcip": data.get("srcip"),
             "srcmac": data.get("srcmac") or data.get("mastersrcmac") or data.get("devicemac"),
+            "auth_user": data.get("user") or data.get("srcuser") or data.get("unauthuser") or data.get("xauthuser"),
             "srcname": data.get("srcname"),
             "dstip": data.get("dstip"),
             "dstmac": data.get("dstmac") or data.get("masterdstmac"),

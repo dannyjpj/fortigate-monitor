@@ -92,6 +92,14 @@ for srcip, used_bytes in rows:
             continue
 
         if synced == 1:
+            cur.execute("""
+            UPDATE quota_status
+            SET used_bytes = ?,
+                used_gb = ?,
+                limit_gb = ?,
+                status = 'BLOCKED'
+            WHERE date = ? AND srcip = ?
+            """, (used_bytes, used_gb, LIMIT_GB, today, srcip))
             continue
 
     name, s1, b1 = fg.create_address(srcip)
@@ -122,20 +130,26 @@ for srcip, used_bytes in rows:
         1
     ))
 
+    conn.commit()
+
     print(f"BLOCKED {srcip} {used_gb}GB -> {obj}")
-    log_event(
-        DB,
-        "quota_blocked",
-        f"IP {srcip} bloqueada por superar {LIMIT_GB}GB",
-        severity="warning",
-        target=srcip,
-        details={
-            "used_gb": used_gb,
-            "limit_gb": LIMIT_GB,
-            "firewall_object": obj,
-            "group": GROUP
-        }
-    )
+
+    try:
+        log_event(
+            DB,
+            "quota_blocked",
+            f"IP {srcip} bloqueada por superar {LIMIT_GB}GB",
+            severity="warning",
+            target=srcip,
+            details={
+                "used_gb": used_gb,
+                "limit_gb": LIMIT_GB,
+                "firewall_object": obj,
+                "group": GROUP
+            }
+        )
+    except sqlite3.OperationalError as exc:
+        print(f"WARN auditoria cuota {srcip}: {exc}")
 
 conn.commit()
 conn.close()

@@ -1,5 +1,16 @@
 # Release Notes
 
+## FortiGate Monitor v1.14.2
+
+Parche operativo para reflejar correctamente bloqueos de cuota y visualizar usuarios autenticados.
+
+### Incluye
+
+- Columna Usuario en vistas operativas y CSV.
+- Captura de usuario desde campos FortiGate `user`, `srcuser`, `unauthuser` o `xauthuser`.
+- Migracion automatica de SQLite para `auth_user`.
+- Correccion del orden de commit en `quota_manager.py` para evitar que fallos de auditoria dejen la UI sin estado de bloqueo.
+
 ## FortiGate Monitor v1.14.1
 
 Parche de inventario para mostrar direcciones MAC cuando FortiGate las envia en los logs.

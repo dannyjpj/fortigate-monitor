@@ -60,6 +60,13 @@
         </div>
         <div class="status-row">
             <div>
+                <strong>Usuario autenticado</strong>
+                <small>{{ detail.summary.auth_user or "-" }}</small>
+            </div>
+            <span class="badge">Portal</span>
+        </div>
+        <div class="status-row">
+            <div>
                 <strong>Objeto firewall</strong>
                 <small>{{ detail.quota.firewall_object or "Sin objeto asociado" }}</small>
             </div>

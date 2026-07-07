@@ -25,6 +25,7 @@ class Database:
             network TEXT,
             srcip TEXT,
             srcmac TEXT,
+            auth_user TEXT,
             srcname TEXT,
             dstip TEXT,
             dstmac TEXT,
@@ -49,6 +50,7 @@ class Database:
 
         self.ensure_column(cursor, "traffic", "srcmac", "TEXT")
         self.ensure_column(cursor, "traffic", "dstmac", "TEXT")
+        self.ensure_column(cursor, "traffic", "auth_user", "TEXT")
 
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_srcmac ON traffic(srcmac)"
@@ -97,6 +99,7 @@ class Database:
             network,
             srcip,
             srcmac,
+            auth_user,
             srcname,
             dstip,
             dstmac,
@@ -109,13 +112,14 @@ class Database:
             rcvdbyte,
             duration
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get("fecha"),
             data.get("hora"),
             data.get("network"),
             data.get("srcip"),
             data.get("srcmac"),
+            data.get("auth_user"),
             data.get("srcname"),
             data.get("dstip"),
             data.get("dstmac"),

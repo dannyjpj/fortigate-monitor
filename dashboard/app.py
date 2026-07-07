@@ -274,6 +274,9 @@ def ensure_traffic_mac_columns(conn):
     if "dstmac" not in columns:
         conn.execute("ALTER TABLE traffic ADD COLUMN dstmac TEXT")
 
+    if "auth_user" not in columns:
+        conn.execute("ALTER TABLE traffic ADD COLUMN auth_user TEXT")
+
     conn.execute("CREATE INDEX IF NOT EXISTS idx_srcmac ON traffic(srcmac)")
     conn.commit()
 
@@ -296,6 +299,7 @@ def clients_inventory(cfg):
             SELECT
                 srcip,
                 COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
+                COALESCE(MAX(NULLIF(auth_user,'')), '-') AS auth_user,
                 COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
                 COALESCE(MAX(NULLIF(network,'')), '-') AS network,
                 SUM(sentbyte + rcvdbyte) AS bytes,
@@ -384,6 +388,7 @@ def client_detail_data(cfg, ip):
         SELECT
             COALESCE(MAX(NULLIF(srcname,'')), ?) AS srcname,
             COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
+            COALESCE(MAX(NULLIF(auth_user,'')), '-') AS auth_user,
             COALESCE(MAX(NULLIF(network,'')), ?) AS network,
             SUM(sentbyte + rcvdbyte) AS bytes,
             SUM(sentbyte) AS sentbyte,
@@ -483,6 +488,7 @@ def quota_center_data(cfg):
     cur.execute("""
         SELECT srcip,
                COALESCE(MAX(NULLIF(srcmac,'')), '-') AS srcmac,
+               COALESCE(MAX(NULLIF(auth_user,'')), '-') AS auth_user,
                COALESCE(MAX(NULLIF(srcname,'')), srcip) AS srcname,
                COALESCE(MAX(NULLIF(network,'')), '-') AS network,
                SUM(sentbyte + rcvdbyte) AS bytes,
@@ -790,6 +796,7 @@ def download_traffic_report():
         "fecha",
         "srcip",
         "srcmac",
+        "auth_user",
         "srcname",
         "network",
         "used_gb",
@@ -805,6 +812,7 @@ def download_traffic_report():
             local_date(),
             row.get("srcip"),
             row.get("srcmac"),
+            row.get("auth_user"),
             row.get("srcname"),
             row.get("network"),
             row.get("used_gb"),

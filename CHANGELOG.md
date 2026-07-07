@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.14.2 - Usuario autenticado y cuota robusta
+
+- Captura usuario autenticado desde logs FortiGate (`user`, `srcuser`, `unauthuser`, `xauthuser`).
+- Agrega columna `auth_user` a SQLite con migracion automatica.
+- Muestra Usuario en dashboard, clientes, detalle de cliente, cuotas y CSV.
+- Corrige `quota_manager.py` para guardar `quota_status` antes de auditar, evitando que `database is locked` oculte bloqueos ya aplicados.
+- Actualiza consumo de una IP ya bloqueada sin volver a crear objetos FortiGate.
+
 ## 1.14.1 - Inventario MAC
 
 - Captura `srcmac`, `mastersrcmac` o `devicemac` desde logs FortiGate cuando esten disponibles.
