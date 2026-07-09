@@ -1,5 +1,35 @@
 # Release Notes
 
+## FortiGate Monitor v1.14.5
+
+Parche de produccion para instalar FortiGate Monitor junto a Zabbix en AlmaLinux/Rocky 9, conservando Apache en `80/443` y publicando la app bajo `/fortigate/`.
+
+### Incluye
+
+- Compatibilidad con reverse proxy por subruta `/fortigate/`.
+- Uso de `ProxyFix` para respetar `X-Forwarded-Prefix`, host y proto enviados por Apache.
+- Rutas `url_for()` en navegacion, descargas, recursos estaticos y acciones AJAX.
+- Endpoint `/healthz` para validacion tecnica.
+- Health/Diagnostico alineados a servicios reales: `fortigate-dashboard`, `fortigate-monitor` y `fortigate-purge.timer`.
+- Documentacion nueva para rsyslog, collector, API, SSH y despliegue con Zabbix.
+
+### Post-deploy
+
+```bash
+systemctl restart fortigate-dashboard
+systemctl restart fortigate-monitor
+systemctl restart rsyslog
+systemctl status fortigate-purge.timer --no-pager
+```
+
+Validar:
+
+- `http://SERVIDOR/fortigate/login`
+- `http://SERVIDOR/fortigate/health`
+- `curl -i http://127.0.0.1:5000/healthz`
+- `/var/log/fortigate.log`
+- `traffic.db`
+
 ## FortiGate Monitor v1.14.4
 
 Parche operativo para entregar una nueva cuota diaria a una IP especifica sin borrar historicos del dia.

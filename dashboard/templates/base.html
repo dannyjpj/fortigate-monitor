@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body data-api-dashboard="{{ url_for('api_dashboard') }}">
 
 <svg class="icon-sprite" aria-hidden="true">
     <symbol id="icon-dashboard" viewBox="0 0 24 24">
@@ -56,28 +56,28 @@
             </button>
 
             <nav id="primary-nav">
-                <a class="{{ 'active' if request.path == '/' else '' }}" href="/">
+                <a class="{{ 'active' if request.endpoint == 'index' else '' }}" href="{{ url_for('index') }}">
                     <svg class="icon"><use href="#icon-dashboard"></use></svg> Dashboard
                 </a>
-                <a class="{{ 'active' if request.path == '/clients' else '' }}" href="/clients">
+                <a class="{{ 'active' if request.endpoint in ['clients', 'client_detail'] else '' }}" href="{{ url_for('clients') }}">
                     <svg class="icon"><use href="#icon-clients"></use></svg> Clientes
                 </a>
-                <a class="{{ 'active' if request.path == '/quotas' else '' }}" href="/quotas">
+                <a class="{{ 'active' if request.endpoint == 'quotas' else '' }}" href="{{ url_for('quotas') }}">
                     <svg class="icon"><use href="#icon-quota"></use></svg> Cuotas
                 </a>
-                <a class="{{ 'active' if request.path == '/portal' else '' }}" href="/portal">
+                <a class="{{ 'active' if request.endpoint == 'portal' else '' }}" href="{{ url_for('portal') }}">
                     <svg class="icon"><use href="#icon-portal"></use></svg> Portal Cautivo
                 </a>
-                <a class="{{ 'active' if request.path == '/health' else '' }}" href="/health">
+                <a class="{{ 'active' if request.endpoint == 'health' else '' }}" href="{{ url_for('health') }}">
                     <svg class="icon"><use href="#icon-health"></use></svg> Health Center
                 </a>
-                <a class="{{ 'active' if request.path == '/events' else '' }}" href="/events">
+                <a class="{{ 'active' if request.endpoint == 'events' else '' }}" href="{{ url_for('events') }}">
                     <svg class="icon"><use href="#icon-events"></use></svg> Eventos
                 </a>
-                <a class="{{ 'active' if request.path == '/diagnostics' else '' }}" href="/diagnostics">
+                <a class="{{ 'active' if request.endpoint == 'diagnostics' else '' }}" href="{{ url_for('diagnostics') }}">
                     <svg class="icon"><use href="#icon-diagnostics"></use></svg> Diagnostico
                 </a>
-                <a class="{{ 'active' if request.path == '/settings' else '' }}" href="/settings">
+                <a class="{{ 'active' if request.endpoint == 'settings' else '' }}" href="{{ url_for('settings') }}">
                     <svg class="icon"><use href="#icon-settings"></use></svg> Configuracion
                 </a>
             </nav>
@@ -87,7 +87,7 @@
             <span class="status-pill">Online</span>
             <div class="user-name">{{ session.get("username") }}</div>
             <small>Administrador</small>
-            <a href="/logout">Cerrar sesion</a>
+            <a href="{{ url_for('logout') }}">Cerrar sesion</a>
         </div>
     </aside>
 

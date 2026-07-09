@@ -57,7 +57,7 @@
             <tbody>
                 {% for item in over_limit %}
                 <tr>
-                    <td data-label="IP"><a class="table-link" href="/clients/{{ item.srcip }}">{{ item.srcip }}</a></td>
+                    <td data-label="IP"><a class="table-link" href="{{ url_for('client_detail', ip=item.srcip) }}">{{ item.srcip }}</a></td>
                     <td data-label="MAC"><span class="mono-value">{{ item.srcmac or "-" }}</span></td>
                     <td data-label="Usuario"><span class="badge">{{ item.auth_user or "-" }}</span></td>
                     <td data-label="Nombre">{{ item.srcname }}</td>
@@ -92,14 +92,14 @@
                     <strong>{{ summary.limit_gb }} GB</strong>
                     <small>Cuota maxima diaria por IP</small>
                 </div>
-                <a class="ghost-link" href="/settings">Editar</a>
+                <a class="ghost-link" href="{{ url_for('settings') }}">Editar</a>
             </div>
             <div class="status-row">
                 <div>
                     <strong>Reset diario</strong>
                     <small>El timer limpia trafico y objetos BLOCK_*</small>
                 </div>
-                <a class="ghost-link" href="/health">Ver health</a>
+                <a class="ghost-link" href="{{ url_for('health') }}">Ver health</a>
             </div>
         </div>
     </section>
@@ -133,7 +133,7 @@
             {% set capped = 100 if percent > 100 else percent %}
             <tr>
                 <td data-label="Fecha">{{ q["date"] }}</td>
-                <td data-label="IP"><a class="table-link" href="/clients/{{ q['srcip'] }}">{{ q["srcip"] }}</a></td>
+                <td data-label="IP"><a class="table-link" href="{{ url_for('client_detail', ip=q['srcip']) }}">{{ q["srcip"] }}</a></td>
                 <td data-label="Consumo">
                     <div class="quota-usage">
                         <strong>{{ q["used_gb"] }} GB</strong>
@@ -188,7 +188,7 @@ function releaseIP(ip){
         return;
     }
 
-    fetch("/api/quota/release/" + ip, { method: "POST" })
+    fetch("{{ url_for('release_quota', ip='__IP__') }}".replace("__IP__", encodeURIComponent(ip)), { method: "POST" })
     .then(response => response.json())
     .then(data => {
         if(data.status === "ok"){
@@ -206,7 +206,7 @@ function resetQuota(ip){
         return;
     }
 
-    fetch("/api/quota/reset/" + ip, { method: "POST" })
+    fetch("{{ url_for('reset_quota', ip='__IP__') }}".replace("__IP__", encodeURIComponent(ip)), { method: "POST" })
     .then(response => response.json().then(data => ({ ok: response.ok, data })))
     .then(result => {
         if(result.ok && result.data.status === "ok"){

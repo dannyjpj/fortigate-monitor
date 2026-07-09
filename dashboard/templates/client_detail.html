@@ -10,7 +10,7 @@
     <div class="ops-status">
         <span class="health-badge">Actualizado</span>
         <strong>{{ checked_at }}</strong>
-        <a class="ghost-link" href="/clients">Volver a Clientes</a>
+        <a class="ghost-link" href="{{ url_for('clients') }}">Volver a Clientes</a>
     </div>
 </section>
 
@@ -129,7 +129,7 @@ function releaseIP(ip){
         return;
     }
 
-    fetch("/api/quota/release/" + ip, { method: "POST" })
+    fetch("{{ url_for('release_quota', ip='__IP__') }}".replace("__IP__", encodeURIComponent(ip)), { method: "POST" })
     .then(response => response.json())
     .then(data => {
         if(data.status === "ok"){
@@ -146,7 +146,7 @@ function resetQuota(ip){
         return;
     }
 
-    fetch("/api/quota/reset/" + ip, { method: "POST" })
+    fetch("{{ url_for('reset_quota', ip='__IP__') }}".replace("__IP__", encodeURIComponent(ip)), { method: "POST" })
     .then(response => response.json().then(data => ({ ok: response.ok, data })))
     .then(result => {
         if(result.ok && result.data.status === "ok"){

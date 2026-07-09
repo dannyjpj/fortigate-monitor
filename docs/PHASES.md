@@ -81,3 +81,14 @@ Este documento resume la evolucion funcional del proyecto por fases. La premisa 
 - Agrega migracion automatica de SQLite para `auth_user`.
 - Muestra Usuario en dashboard, clientes, detalle de cliente, centro de cuotas y CSV diario.
 - Corrige el ciclo de cuota para persistir `quota_status` antes de auditar, evitando que un bloqueo aplicado no aparezca en la UI.
+
+## v1.14.5
+
+### Parche - Produccion con Zabbix y syslog
+
+- Soporta publicacion por Apache bajo `/fortigate/` usando `X-Forwarded-Prefix`.
+- Mantiene Zabbix con prioridad sobre puertos `80/443` y la raiz del servidor.
+- Agrega `/healthz` para monitoreo tecnico.
+- Alinea Health/Diagnostico con servicios reales: `fortigate-dashboard`, `fortigate-monitor` y `fortigate-purge.timer`.
+- Documenta configuracion productiva de rsyslog UDP `514`, `/var/log/fortigate.log`, collector y SQLite.
+- Documenta validacion de API FortiGate, SSH con llave publica y reset diario del portal cautivo.

@@ -50,6 +50,16 @@ Actualmente el sistema ofrece las siguientes funcionalidades:
 
 ---
 
+# Documentacion de produccion
+
+Para despliegues en AlmaLinux/Rocky 9 junto a Zabbix en Apache, revisar:
+
+- `docs/PRODUCTION_ZABBIX_ALMALINUX9.md`
+
+Esta guia cubre reverse proxy bajo `/fortigate/`, rsyslog UDP 514, collector, SQLite, API, SSH y timer diario.
+
+---
+
 # Casos de uso
 
 FortiGate Monitor puede utilizarse en diferentes entornos, por ejemplo:

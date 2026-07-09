@@ -6,7 +6,8 @@ async function actualizarDashboard() {
     let data;
 
     try {
-        const r = await fetch("/api/dashboard");
+        const apiDashboard = document.body.dataset.apiDashboard || "/api/dashboard";
+        const r = await fetch(apiDashboard);
         data = await r.json();
     } catch (error) {
         return;

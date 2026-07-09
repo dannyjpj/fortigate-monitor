@@ -13,6 +13,7 @@ from functools import wraps
 
 from flask import send_file
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, Response
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -25,6 +26,7 @@ from modules.audit import log_event, ensure_audit_table
 from dashboard.utils import format_bytes
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 cfg = Config().get()
 app.secret_key = cfg["dashboard"]["secret_key"]
@@ -675,7 +677,7 @@ def diagnostics_data(cfg):
     fg = fortigate_health(cfg)
     add("Address Group de bloqueo", fg["ok"], fg["detail"], "FortiGate")
 
-    for service in ("fortigate-dashboard", "fortigate-monitor", "fortigate-collector"):
+    for service in ("fortigate-dashboard", "fortigate-monitor"):
         state = service_state(service)
         add(service, state["ok"], state["state"], "Servicios")
 
@@ -755,7 +757,6 @@ def health():
     services = [
         service_state("fortigate-dashboard"),
         service_state("fortigate-monitor"),
-        service_state("fortigate-collector"),
     ]
     purge_timer = timer_state("fortigate-purge.timer")
     db = database_health(db_path)
@@ -781,6 +782,39 @@ def health():
         networks=cfg.get("networks", []),
         timezone=cfg.get("general", {}).get("timezone", "America/Lima")
     )
+
+
+@app.route("/healthz")
+def healthz():
+    cfg = Config().get()
+    db_path = cfg["general"]["database"]
+    services = [
+        service_state("fortigate-dashboard"),
+        service_state("fortigate-monitor"),
+    ]
+    purge_timer = timer_state("fortigate-purge.timer")
+    db = database_health(db_path)
+    fg = fortigate_health(cfg)
+    quota = quota_health(cfg, db_path)
+
+    overall_ok = (
+        all(item["ok"] for item in services[:2])
+        and purge_timer["ok"]
+        and db["ok"]
+        and fg["ok"]
+    )
+
+    status_code = 200 if overall_ok else 503
+    return jsonify({
+        "ok": overall_ok,
+        "checked_at": local_timestamp(),
+        "timezone": cfg.get("general", {}).get("timezone", "America/Lima"),
+        "services": services,
+        "purge_timer": purge_timer,
+        "database": db,
+        "fortigate": fg,
+        "quota": quota,
+    }), status_code
 
 
 @app.route("/clients")

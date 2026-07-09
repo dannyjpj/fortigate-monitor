@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.14.5 - Despliegue productivo con Zabbix y syslog
+
+- Agrega soporte para publicar el dashboard bajo prefijo Apache `/fortigate/`.
+- Corrige rutas internas, recursos estaticos, descargas y llamadas AJAX para reverse proxy con `X-Forwarded-Prefix`.
+- Agrega endpoint publico `/healthz` para monitoreo tecnico sin iniciar sesion.
+- Elimina el falso servicio `fortigate-collector` del Health/Diagnostico; el collector real es `fortigate-monitor.service`.
+- Documenta despliegue productivo junto a Zabbix conservando puertos `80/443`.
+- Documenta rsyslog UDP `514`, `/var/log/fortigate.log`, collector, SQLite, API FortiGate y SSH con llave publica.
+- Incluye notas de verificacion para `fortigate-purge.timer`, reset diario y portal cautivo.
+
 ## 1.14.4 - Restablecimiento manual de cuota
 
 - Agrega boton `Restablecer cuota` junto a `Liberar`.
